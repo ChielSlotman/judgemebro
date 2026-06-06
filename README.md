@@ -35,10 +35,11 @@ npm run build
 ## Smoke Test
 
 ```bash
+npm run test:judge
 npm run test:smoke
 ```
 
-The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
+The judge test validates the Vercel API contract. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
 
 ## Setup Check
 

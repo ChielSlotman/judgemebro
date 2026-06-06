@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BadgeCheck,
   Bell,
@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { bots, categories, scenarios, viewerAnswers as seedViewerAnswers } from "./data.js";
 import { recordBattleResult, recordViewerSubmission } from "./lib/gameRepository.js";
+import { requestJudgeVerdict } from "./lib/judgeClient.js";
 
 const iconMap = {
   Briefcase,
@@ -48,30 +49,6 @@ function clampAnswer(value) {
 
 function getScenario(categoryId) {
   return scenarios[categoryId] ?? scenarios.social;
-}
-
-function buildResult({ category, answer, opponent = "Juno", mode = "ranked", botName }) {
-  const scenario = getScenario(category.id);
-  const typed = answer.trim();
-  const noAnswer = typed.length === 0;
-  const youWin = !noAnswer && typed.length >= 42;
-  const points = mode === "bot" ? 0 : youWin ? 18 : -18;
-
-  return {
-    mode,
-    category,
-    opponent: botName ?? opponent,
-    prompt: scenario.prompt,
-    yourAnswer: noAnswer ? "No answer submitted." : typed,
-    opponentAnswer: mode === "bot" ? scenario.winningAnswer : scenario.opponentAnswer,
-    youWin,
-    points,
-    reason: noAnswer
-      ? "You missed the timer, so the round goes to your opponent."
-      : youWin
-        ? scenario.reason
-        : "Your answer was shorter and less specific, so the judge gave the round away.",
-  };
 }
 
 function BrandHeader({ onHome, onProfile, onLeave, compact = false }) {
@@ -676,6 +653,7 @@ export function App() {
   const [friendJoined, setFriendJoined] = useState(false);
   const [battleMode, setBattleMode] = useState("ranked");
   const [botName, setBotName] = useState(null);
+  const isJudgingRef = useRef(false);
 
   const botReady = matchElapsed >= 5;
 
@@ -709,6 +687,7 @@ export function App() {
     setTimer(24);
     setMatchElapsed(0);
     setFriendJoined(false);
+    isJudgingRef.current = false;
   }
 
   function startMatchmaking() {
@@ -732,18 +711,24 @@ export function App() {
     window.setTimeout(() => finishRound(), 1600);
   }
 
-  function finishRound() {
-    const nextResult = buildResult({
+  async function finishRound() {
+    if (isJudgingRef.current) return;
+    isJudgingRef.current = true;
+    const scenario = getScenario(selectedCategory.id);
+    const nextResult = await requestJudgeVerdict({
       category: selectedCategory,
-      answer,
+      prompt: scenario.prompt,
+      yourAnswer: answer,
+      opponentAnswer: battleMode === "bot" ? scenario.winningAnswer : scenario.opponentAnswer,
       mode: battleMode,
-      botName,
+      opponent: botName ?? "Juno",
     });
     setResult(nextResult);
     recordBattleResult(nextResult).catch((error) => {
       console.warn("Battle result persistence failed", error);
     });
     setRating((current) => current + nextResult.points);
+    isJudgingRef.current = false;
     setScreen("result");
   }
 
@@ -759,23 +744,22 @@ export function App() {
     }
   }
 
-  function officialStreamerBattle(streamerAnswer, viewerAnswer) {
-    const nextResult = {
+  async function officialStreamerBattle(streamerAnswer, viewerAnswer) {
+    if (isJudgingRef.current) return;
+    isJudgingRef.current = true;
+    const nextResult = await requestJudgeVerdict({
       mode: "streamer",
       category: categories[1],
       opponent: viewerAnswer.name,
       prompt: getScenario("dating").prompt,
       yourAnswer: streamerAnswer,
       opponentAnswer: viewerAnswer.text,
-      youWin: streamerAnswer.length >= viewerAnswer.text.length,
-      points: 0,
-      reason:
-        "The official battle only judged the streamer answer against the selected viewer answer. Viewer submissions stayed free until picked.",
-    };
+    });
     setResult(nextResult);
     recordBattleResult(nextResult).catch((error) => {
       console.warn("Streamer battle persistence failed", error);
     });
+    isJudgingRef.current = false;
     setScreen("result");
   }
 

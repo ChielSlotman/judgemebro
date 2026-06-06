@@ -7,6 +7,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
+    "test:judge": "node scripts/judge-api-test.mjs",
     "test:smoke": "node scripts/smoke-test.mjs",
     "setup:check": "node scripts/setup-check.mjs"
   },

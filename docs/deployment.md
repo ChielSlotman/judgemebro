@@ -29,9 +29,16 @@ For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes cr
 ```bash
 npm ci
 npm run build
+npm run test:judge
 npx playwright install --with-deps chromium
 npm run test:smoke
 ```
+
+## Judge API
+
+Vercel deploys `api/judge.js` as a serverless function. The client calls `/api/judge` first and falls back to the local deterministic judge engine when running in plain Vite preview or when the API is unavailable.
+
+The API intentionally judges only official battles. Streamer viewer answers are stored/displayed by default and should only be sent to `/api/judge` after the streamer manually selects one.
 
 If you later want CLI-based Vercel deployment from GitHub Actions, add these repository secrets:
 
