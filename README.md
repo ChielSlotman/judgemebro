@@ -32,6 +32,14 @@ The Vite dev server runs on `http://127.0.0.1:5173` by default.
 npm run build
 ```
 
+## Smoke Test
+
+```bash
+npm run test:smoke
+```
+
+The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
+
 ## Setup Docs
 
 - Supabase schema and RLS notes: `docs/supabase.md`

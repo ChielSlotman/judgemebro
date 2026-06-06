@@ -28,6 +28,8 @@ For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes cr
 ```bash
 npm ci
 npm run build
+npx playwright install --with-deps chromium
+npm run test:smoke
 ```
 
 If you later want CLI-based Vercel deployment from GitHub Actions, add these repository secrets:
