@@ -37,6 +37,38 @@ or apply the checked-in SQL through the Supabase SQL editor.
 - Anonymous inserts are only allowed for prototype battle results with `user_id is null` and streamer viewer answers for live rooms.
 - Viewer answers are not AI judged by default. The schema tracks `selected_for_official_battle` separately so only manually selected answers should trigger paid AI judgment.
 
+## Realtime
+
+The second migration enables Postgres Changes on the tables that need live UI updates:
+
+```text
+supabase/migrations/20260607002000_enable_realtime_game_tables.sql
+```
+
+Realtime-enabled tables:
+
+- `friend_battle_rooms`
+- `streamer_rooms`
+- `streamer_viewer_answers`
+- `battle_results`
+
+The client helper functions live in `src/lib/gameRepository.js`:
+
+- `subscribeToStreamerAnswers(roomCode, onChange)`
+- `subscribeToFriendRoom(roomCode, onChange)`
+
+RLS still applies to Realtime visibility. Streamer answer subscriptions are intended for authenticated streamers who own the room; viewer submissions can remain cheap inserts and do not trigger AI judging unless selected.
+
+## Setup Check
+
+Run:
+
+```bash
+npm run setup:check
+```
+
+This reports whether Git remotes, Vercel CLI/linking, GitHub CLI, Supabase CLI, and Supabase env vars are present.
+
 ## Prototype Tables
 
 - `profiles`

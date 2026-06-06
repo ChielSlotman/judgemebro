@@ -57,3 +57,55 @@ export async function recordViewerSubmission({ roomCode, displayName, answer }) 
 
   return { ok: true };
 }
+
+export function subscribeToStreamerAnswers(roomCode, onChange) {
+  if (!hasSupabaseConfig || !supabase) return { skipped: true, unsubscribe: () => {} };
+
+  const channel = supabase
+    .channel(`streamer-viewer-answers:${roomCode}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "streamer_viewer_answers",
+        filter: `room_code=eq.${roomCode}`,
+      },
+      onChange,
+    )
+    .subscribe();
+
+  return {
+    skipped: false,
+    channel,
+    unsubscribe: () => {
+      supabase.removeChannel(channel);
+    },
+  };
+}
+
+export function subscribeToFriendRoom(roomCode, onChange) {
+  if (!hasSupabaseConfig || !supabase) return { skipped: true, unsubscribe: () => {} };
+
+  const channel = supabase
+    .channel(`friend-room:${roomCode}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "friend_battle_rooms",
+        filter: `room_code=eq.${roomCode}`,
+      },
+      onChange,
+    )
+    .subscribe();
+
+  return {
+    skipped: false,
+    channel,
+    unsubscribe: () => {
+      supabase.removeChannel(channel);
+    },
+  };
+}

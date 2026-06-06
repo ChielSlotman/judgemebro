@@ -40,6 +40,14 @@ npm run test:smoke
 
 The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
 
+## Setup Check
+
+```bash
+npm run setup:check
+```
+
+Use this before pushing/deploying to see whether GitHub, Vercel, and Supabase local setup is complete.
+
 ## Setup Docs
 
 - Supabase schema and RLS notes: `docs/supabase.md`

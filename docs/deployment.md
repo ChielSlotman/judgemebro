@@ -11,12 +11,13 @@ The repo includes `vercel.json` for a Vite deployment:
 Recommended first-time setup:
 
 ```bash
-vercel link --yes --project judgemebro
-vercel env add VITE_SUPABASE_URL production
-vercel env add VITE_SUPABASE_PUBLISHABLE_KEY production
-vercel env add VITE_SUPABASE_URL preview development
-vercel env add VITE_SUPABASE_PUBLISHABLE_KEY preview development
-vercel deploy
+npm run setup:check
+npx vercel link --yes --project judgemebro
+npx vercel env add VITE_SUPABASE_URL production
+npx vercel env add VITE_SUPABASE_PUBLISHABLE_KEY production
+npx vercel env add VITE_SUPABASE_URL preview development
+npx vercel env add VITE_SUPABASE_PUBLISHABLE_KEY preview development
+npx vercel deploy
 ```
 
 For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes create preview deployments. Production should deploy from `main`.
