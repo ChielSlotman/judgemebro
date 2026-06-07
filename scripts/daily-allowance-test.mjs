@@ -1,4 +1,9 @@
-import { DAILY_RANKED_BATTLES, canStartRatedBattle, resolveDailyBattlesLeft } from "../src/lib/dailyAllowance.js";
+import {
+  DAILY_RANKED_BATTLES,
+  canStartRatedBattle,
+  resolveDailyBattlesLeft,
+  resolveStreakAfterBattle,
+} from "../src/lib/dailyAllowance.js";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -24,5 +29,22 @@ assert(!canStartRatedBattle("ranked", 0), "Expected ranked battle to stop at zer
 assert(!canStartRatedBattle("friend", 0), "Expected friend battle to stop at zero allowance");
 assert(canStartRatedBattle("bot", 0), "Expected bot battle to ignore ranked allowance");
 assert(canStartRatedBattle("streamer", 0), "Expected streamer battle to ignore ranked allowance");
+
+assert(
+  resolveStreakAfterBattle({ currentStreak: 3, lastPlayedDate: "", today: "2026-06-07" }) === 3,
+  "Expected first tracked play to preserve current display streak",
+);
+assert(
+  resolveStreakAfterBattle({ currentStreak: 3, lastPlayedDate: "2026-06-07", today: "2026-06-07" }) === 3,
+  "Expected same-day replay to preserve streak",
+);
+assert(
+  resolveStreakAfterBattle({ currentStreak: 3, lastPlayedDate: "2026-06-06", today: "2026-06-07" }) === 4,
+  "Expected next-day play to increment streak",
+);
+assert(
+  resolveStreakAfterBattle({ currentStreak: 3, lastPlayedDate: "2026-06-04", today: "2026-06-07" }) === 1,
+  "Expected missed days to reset streak",
+);
 
 console.log("Daily allowance check passed");

@@ -32,7 +32,12 @@ import {
 } from "lucide-react";
 import { bots, categories, scenarios } from "./data.js";
 import { getBotAnswer } from "./lib/botEngine.js";
-import { DAILY_RANKED_BATTLES, canStartRatedBattle, resolveDailyBattlesLeft } from "./lib/dailyAllowance.js";
+import {
+  DAILY_RANKED_BATTLES,
+  canStartRatedBattle,
+  resolveDailyBattlesLeft,
+  resolveStreakAfterBattle,
+} from "./lib/dailyAllowance.js";
 import {
   createFriendBattleRoom,
   createStreamerRoom,
@@ -1577,6 +1582,7 @@ export function App() {
   const [answer, setAnswer] = useState("");
   const [rating, setRating] = useState(() => readStoredNumber("rating", 1128));
   const [streak, setStreak] = useState(() => readStoredNumber("streak", 3));
+  const [lastStreakPlayDate, setLastStreakPlayDate] = useState(() => readStoredJson("streak-last-play-date", ""));
   const [battleAllowanceDate, setBattleAllowanceDate] = useState(() => readStoredJson("battles-left-date", todayKey()));
   const [battlesLeft, setBattlesLeft] = useState(() => {
     const storedDate = readStoredJson("battles-left-date", "");
@@ -1629,7 +1635,8 @@ export function App() {
 
   useEffect(() => {
     writeStoredJson("streak", streak);
-  }, [streak]);
+    writeStoredJson("streak-last-play-date", lastStreakPlayDate);
+  }, [streak, lastStreakPlayDate]);
 
   useEffect(() => {
     writeStoredJson("battles-left", battlesLeft);
@@ -2038,7 +2045,17 @@ export function App() {
     }));
     setBattleHistory((current) => [buildHistoryEntry(nextResult), ...current].slice(0, 20));
     setBattlesLeft((current) => Math.max(0, current - (nextResult.mode === "bot" ? 0 : 1)));
-    setStreak((current) => Math.max(current, 3));
+    if (nextResult.mode !== "bot" && nextResult.mode !== "streamer") {
+      const today = todayKey();
+      setStreak((current) =>
+        resolveStreakAfterBattle({
+          currentStreak: current,
+          lastPlayedDate: lastStreakPlayDate,
+          today,
+        }),
+      );
+      setLastStreakPlayDate(today);
+    }
     setScenarioRound((current) => randomScenarioRound(selectedCategory.id, current));
     isJudgingRef.current = false;
     setScreen("result");

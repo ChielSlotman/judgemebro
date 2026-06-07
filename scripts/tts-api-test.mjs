@@ -42,7 +42,8 @@ globalThis.fetch = async (url, options) => {
   const body = JSON.parse(options.body);
   assert(body.model === "canopylabs/orpheus-v1-english", "Expected Orpheus model");
   assert(body.voice === "troy", "Expected Troy voice");
-  assert(body.input.includes("light funny accent"), "Expected commentator accent style");
+  assert(body.input.includes("[cheeky, playful, fast-paced]"), "Expected playful commentator accent style");
+  assert(body.input.length <= 200, "Expected Groq input to respect Orpheus character limit");
   assert(body.response_format === "wav", "Expected Groq wav response");
   return {
     ok: true,
