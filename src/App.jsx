@@ -30,7 +30,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { bots, categories, scenarios, viewerAnswers as seedViewerAnswers } from "./data.js";
+import { bots, categories, scenarios } from "./data.js";
 import {
   createFriendBattleRoom,
   createStreamerRoom,
@@ -87,6 +87,16 @@ function getScenario(categoryId, roundIndex = 0) {
 function getScenarioCount(categoryId) {
   const deck = scenarios[categoryId] ?? scenarios.social;
   return Array.isArray(deck) ? deck.length : 1;
+}
+
+function randomScenarioRound(categoryId, previousRound = -1) {
+  const count = getScenarioCount(categoryId);
+  if (count <= 1) return 0;
+
+  const previousIndex = Math.abs(previousRound) % count;
+  let nextIndex = Math.floor(Math.random() * count);
+  if (nextIndex === previousIndex) nextIndex = (nextIndex + 1) % count;
+  return nextIndex;
 }
 
 function inviteBaseUrl() {
@@ -215,6 +225,32 @@ function buildHistoryEntry(result) {
     points: result.points,
     createdAt: new Date().toISOString(),
   };
+}
+
+function seedAnswersForScenario(scenario) {
+  const promptKey = scenario.prompt.slice(0, 18).replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+  return [
+    {
+      id: `seed-win-${promptKey}`,
+      name: "Viewer 1",
+      text: scenario.winningAnswer,
+    },
+    {
+      id: `seed-risk-${promptKey}`,
+      name: "Viewer 2",
+      text: scenario.opponentAnswer,
+    },
+    {
+      id: `seed-clean-${promptKey}`,
+      name: "Viewer 3",
+      text: "I would keep it calm, direct, and impossible to misread.",
+    },
+    {
+      id: `seed-chaos-${promptKey}`,
+      name: "Viewer 4",
+      text: "I am choosing peace, but I am keeping receipts.",
+    },
+  ];
 }
 
 function pickCommentatorVoice() {
@@ -1125,15 +1161,18 @@ function normalizeViewerAnswer(answer) {
 
 function StreamerScreen({ roomCode, category, scenario, roundIndex, setCategory, onHome, onViewer, onOfficial, onNextScenario }) {
   const [streamerAnswer, setStreamerAnswer] = useState(() => scenario.winningAnswer);
-  const [answers, setAnswers] = useState(seedViewerAnswers);
-  const [selected, setSelected] = useState(seedViewerAnswers[0]);
+  const [answers, setAnswers] = useState(() => seedAnswersForScenario(scenario));
+  const [selected, setSelected] = useState(() => seedAnswersForScenario(scenario)[0]);
   const [copied, setCopied] = useState(false);
   const [streamStatus, setStreamStatus] = useState("Viewer answers are free until selected.");
   const [roundNumber, setRoundNumber] = useState(1);
   const currentScenario = scenario;
 
   useEffect(() => {
+    const seededAnswers = seedAnswersForScenario(currentScenario);
     setStreamerAnswer(currentScenario.winningAnswer);
+    setAnswers(seededAnswers);
+    setSelected(seededAnswers[0]);
   }, [currentScenario]);
 
   useEffect(() => {
@@ -1221,8 +1260,6 @@ function StreamerScreen({ roomCode, category, scenario, roundIndex, setCategory,
     onNextScenario(nextCategory.id);
     setRoundNumber((value) => value + 1);
     setStreamerAnswer(nextScenario.winningAnswer);
-    setSelected(seedViewerAnswers[0]);
-    setAnswers(seedViewerAnswers);
     setStreamStatus("New round live. Viewer answers stay free until selected.");
   }
 
@@ -1785,7 +1822,7 @@ export function App() {
   }
 
   function nextScenario(categoryId = selectedCategory.id) {
-    setScenarioRound((current) => (current + 1) % getScenarioCount(categoryId));
+    setScenarioRound((current) => randomScenarioRound(categoryId, current));
   }
 
   function claimStreakReward() {
@@ -1891,7 +1928,7 @@ export function App() {
     setBattleHistory((current) => [buildHistoryEntry(nextResult), ...current].slice(0, 20));
     setBattlesLeft((current) => Math.max(0, current - (nextResult.mode === "bot" ? 0 : 1)));
     setStreak((current) => Math.max(current, 3));
-    setScenarioRound((current) => (current + 1) % getScenarioCount(selectedCategory.id));
+    setScenarioRound((current) => randomScenarioRound(selectedCategory.id, current));
     isJudgingRef.current = false;
     setScreen("result");
   }
@@ -2066,7 +2103,7 @@ export function App() {
     resetPath();
     setStreamRoomCode(createRoomCode());
     setSelectedCategory(categories[1]);
-    setScenarioRound(0);
+    setScenarioRound(randomScenarioRound(categories[1].id));
     setScreen("streamer");
   }
 

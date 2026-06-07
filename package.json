@@ -9,6 +9,7 @@
     "preview": "vite preview --host 127.0.0.1",
     "test:judge": "node scripts/judge-api-test.mjs",
     "test:tts": "node scripts/tts-api-test.mjs",
+    "test:content": "node scripts/content-check.mjs",
     "test:supabase": "node scripts/supabase-schema-check.mjs",
     "check:multiplayer-production": "node scripts/production-multiplayer-check.mjs",
     "test:workflows": "node scripts/workflow-check.mjs",
