@@ -52,8 +52,12 @@ npm run setup:check
 npx vercel link --yes --project judgemebro
 npx vercel env add VITE_SUPABASE_URL production
 npx vercel env add VITE_SUPABASE_PUBLISHABLE_KEY production
+npx vercel env add OPENAI_API_KEY production
+npx vercel env add OPENAI_JUDGE_MODEL production
 npx vercel env add VITE_SUPABASE_URL preview development
 npx vercel env add VITE_SUPABASE_PUBLISHABLE_KEY preview development
+npx vercel env add OPENAI_API_KEY preview development
+npx vercel env add OPENAI_JUDGE_MODEL preview development
 npx vercel deploy
 ```
 
@@ -130,5 +134,7 @@ It installs the Supabase CLI through `supabase/setup-cli@v2`.
 ## Judge API
 
 Vercel deploys `api/judge.js` as a serverless function. The client calls `/api/judge` first and falls back to the local deterministic judge engine when running in plain Vite preview or when the API is unavailable.
+
+When `OPENAI_API_KEY` is configured in Vercel, `/api/judge` uses the OpenAI Responses API with structured JSON output for submitted answer comparisons. `OPENAI_JUDGE_MODEL` is optional and defaults to `gpt-4o-mini`. Do not expose `OPENAI_API_KEY` through any `VITE_` environment variable.
 
 The API intentionally judges only official battles. Streamer viewer answers are stored/displayed by default and should only be sent to `/api/judge` after the streamer manually selects one.

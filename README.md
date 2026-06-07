@@ -77,6 +77,8 @@ npm run sync:vercel-env
 
 Use this after `.env.local` contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The sync script never sends `SUPABASE_SERVICE_ROLE_KEY`.
 
+The judge API can use a real server-side AI judge when `OPENAI_API_KEY` is set in Vercel. Keep it server-only; never add it as a `VITE_` variable.
+
 ## GitHub Publish
 
 ```bash

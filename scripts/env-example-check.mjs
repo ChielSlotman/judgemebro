@@ -3,7 +3,12 @@ import { join } from "node:path";
 
 const root = process.cwd();
 const text = readFileSync(join(root, ".env.example"), "utf8");
-const requiredKeys = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY"];
+const requiredKeys = [
+  "VITE_SUPABASE_URL",
+  "VITE_SUPABASE_PUBLISHABLE_KEY",
+  "OPENAI_API_KEY",
+  "OPENAI_JUDGE_MODEL",
+];
 const failures = [];
 
 for (const key of requiredKeys) {
@@ -17,7 +22,7 @@ if (text.includes("SUPABASE_SERVICE_ROLE_KEY")) {
   failures.push(".env.example must not include SUPABASE_SERVICE_ROLE_KEY");
 }
 
-if (text.includes("sk_") || text.includes("eyJ")) {
+if (/\bsk-[A-Za-z0-9_-]{12,}/.test(text) || text.includes("eyJ")) {
   failures.push(".env.example appears to contain a real secret or JWT-like value");
 }
 
