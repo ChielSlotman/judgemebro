@@ -1,11 +1,21 @@
 import { readFile } from "node:fs/promises";
 import { spawnSync } from "node:child_process";
 
-const requiredKeys = ["OPENAI_API_KEY"];
-const optionalDefaults = {
-  OPENAI_JUDGE_MODEL: "gpt-4o-mini",
+const providerConfig = {
+  openai: {
+    required: ["OPENAI_API_KEY"],
+    defaults: {
+      OPENAI_JUDGE_MODEL: "gpt-4o-mini",
+    },
+  },
+  groq: {
+    required: ["GROQ_API_KEY"],
+    defaults: {
+      GROQ_JUDGE_MODEL: "llama-3.1-8b-instant",
+    },
+  },
 };
-const environments = ["production", "preview", "development"];
+const environments = ["production", "development"];
 const cliArgs = process.argv.slice(2);
 const args = new Set(cliArgs);
 const dryRun = args.has("--dry-run");
@@ -41,6 +51,21 @@ try {
   process.exit(1);
 }
 
+const provider =
+  (env.JUDGE_PROVIDER || (env.GROQ_API_KEY ? "groq" : env.OPENAI_API_KEY ? "openai" : ""))
+    .toLowerCase()
+    .trim();
+const config = providerConfig[provider];
+
+if (!config) {
+  console.error("Set JUDGE_PROVIDER to a hosted provider before syncing server AI env values: openai or groq.");
+  process.exit(1);
+}
+
+env.JUDGE_PROVIDER = provider;
+
+const requiredKeys = ["JUDGE_PROVIDER", ...config.required];
+const optionalDefaults = config.defaults;
 const missing = requiredKeys.filter((key) => !env[key]);
 if (missing.length) {
   console.error(`Missing required server env value${missing.length === 1 ? "" : "s"}: ${missing.join(", ")}`);
@@ -79,7 +104,7 @@ for (const key of [...requiredKeys, ...Object.keys(optionalDefaults)]) {
       "--force",
     ];
 
-    if (key === "OPENAI_API_KEY" && environment !== "development") {
+    if (key.endsWith("_API_KEY") && environment !== "development") {
       commandArgs.push("--sensitive");
     }
 

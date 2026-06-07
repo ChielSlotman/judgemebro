@@ -153,8 +153,9 @@ const checks = [
     label: "Local AI judge configured",
     ok:
       Boolean(localEnv.OPENAI_API_KEY) ||
+      (localAiProvider === "groq" && Boolean(localEnv.GROQ_API_KEY) && Boolean(localEnv.GROQ_JUDGE_MODEL)) ||
       (localAiProvider === "ollama" && Boolean(localEnv.OLLAMA_JUDGE_URL) && Boolean(localEnv.OLLAMA_JUDGE_MODEL)),
-    detail: localAiProvider === "ollama" ? "Ollama" : ".env.local",
+    detail: localAiProvider || ".env.local",
   },
   {
     label: "Vercel Supabase URL env configured",
@@ -167,13 +168,13 @@ const checks = [
     detail: "vercel env ls",
   },
   {
-    label: "Vercel OpenAI API key env configured",
-    ok: vercelEnv.output.includes("OPENAI_API_KEY"),
+    label: "Vercel hosted AI API key env configured",
+    ok: vercelEnv.output.includes("GROQ_API_KEY") || vercelEnv.output.includes("OPENAI_API_KEY"),
     detail: "vercel env ls",
   },
   {
-    label: "Vercel OpenAI judge model env configured",
-    ok: vercelEnv.output.includes("OPENAI_JUDGE_MODEL"),
+    label: "Vercel hosted AI judge model env configured",
+    ok: vercelEnv.output.includes("GROQ_JUDGE_MODEL") || vercelEnv.output.includes("OPENAI_JUDGE_MODEL"),
     detail: "vercel env ls",
   },
   {

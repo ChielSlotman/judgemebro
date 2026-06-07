@@ -9,6 +9,8 @@ const requiredKeys = [
   "JUDGE_PROVIDER",
   "OPENAI_API_KEY",
   "OPENAI_JUDGE_MODEL",
+  "GROQ_API_KEY",
+  "GROQ_JUDGE_MODEL",
   "OLLAMA_JUDGE_URL",
   "OLLAMA_JUDGE_MODEL",
 ];

@@ -77,7 +77,7 @@ npm run sync:vercel-env
 
 Use this after `.env.local` contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The sync script never sends `SUPABASE_SERVICE_ROLE_KEY`.
 
-The judge API can use a real server-side AI judge when `OPENAI_API_KEY` is set in Vercel. Keep it server-only; never add it as a `VITE_` variable. Use `npm run sync:vercel-server-env` after adding `OPENAI_API_KEY` to `.env.local`.
+The judge API can use a real server-side AI judge on Vercel. For free hosted testing, set `JUDGE_PROVIDER=groq`, `GROQ_API_KEY`, and `GROQ_JUDGE_MODEL=llama-3.1-8b-instant`. OpenAI is also supported with `JUDGE_PROVIDER=openai`, `OPENAI_API_KEY`, and `OPENAI_JUDGE_MODEL`. Keep provider keys server-only; never add them as `VITE_` variables. Use `npm run sync:vercel-server-env` after adding hosted AI values to `.env.local`.
 
 For free local judge testing, start `D:\LocalAI\start-ollama.cmd`, set `JUDGE_PROVIDER=ollama`, and run with `npm exec vercel -- dev`. See `docs/local-ai.md`.
 

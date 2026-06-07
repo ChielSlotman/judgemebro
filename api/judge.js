@@ -3,6 +3,8 @@ import { judgeAnswers } from "../src/lib/judgeEngine.js";
 const MAX_CHARS = 280;
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const GROQ_CHAT_COMPLETIONS_URL = "https://api.groq.com/openai/v1/chat/completions";
+const DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant";
 const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/chat";
 const DEFAULT_OLLAMA_MODEL = "text-judge";
 
@@ -38,6 +40,16 @@ async function judgeWithConfiguredProvider(payload) {
       providerName: "Ollama judge",
       modelName: `ollama:${process.env.OLLAMA_JUDGE_MODEL || DEFAULT_OLLAMA_MODEL}`,
       requestVerdict: requestOllamaJudge,
+    });
+  }
+
+  if (shouldUseGroqJudge()) {
+    return judgeWithProvider({
+      payload,
+      localResult,
+      providerName: "Groq judge",
+      modelName: `groq:${process.env.GROQ_JUDGE_MODEL || DEFAULT_GROQ_MODEL}`,
+      requestVerdict: requestGroqJudge,
     });
   }
 
@@ -80,12 +92,20 @@ function shouldUseOpenAIJudge() {
   return Boolean(process.env.OPENAI_API_KEY) && providerName() === "openai";
 }
 
+function shouldUseGroqJudge() {
+  return Boolean(process.env.GROQ_API_KEY) && providerName() === "groq";
+}
+
 function shouldUseOllamaJudge() {
   return providerName() === "ollama";
 }
 
 function providerName() {
-  return (process.env.JUDGE_PROVIDER || process.env.OPENAI_JUDGE_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "local"))
+  return (
+    process.env.JUDGE_PROVIDER ||
+    process.env.OPENAI_JUDGE_PROVIDER ||
+    (process.env.GROQ_API_KEY ? "groq" : process.env.OPENAI_API_KEY ? "openai" : "local")
+  )
     .toLowerCase()
     .trim();
 }
@@ -159,6 +179,57 @@ async function requestOpenAIJudge(payload) {
 
   if (!["you", "opponent"].includes(verdict.winner) || typeof verdict.reason !== "string") {
     throw new Error("OpenAI judge returned invalid verdict payload");
+  }
+
+  return verdict;
+}
+
+async function requestGroqJudge(payload) {
+  const model = process.env.GROQ_JUDGE_MODEL || DEFAULT_GROQ_MODEL;
+  const groqResponse = await fetch(GROQ_CHAT_COMPLETIONS_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0,
+      response_format: {
+        type: "json_object",
+      },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are the fair judge for judgemebro.com, a fast 1v1 decision game. Pick the better short answer. Reward practical judgment, boundaries, clarity, confidence without cruelty, and a useful next step. Do not reward roasting, unsafe advice, manipulation, or empty bravado. Return JSON only with winner and reason.",
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            mode: payload.mode ?? "ranked",
+            category: payload.category,
+            prompt: payload.prompt,
+            you: payload.yourAnswer,
+            opponentName: payload.opponent ?? "Opponent",
+            opponent: payload.opponentAnswer,
+          }),
+        },
+      ],
+    }),
+  });
+
+  if (!groqResponse.ok) {
+    const errorText = await groqResponse.text();
+    throw new Error(`Groq judge HTTP ${groqResponse.status}: ${errorText}`);
+  }
+
+  const responsePayload = await groqResponse.json();
+  const outputText = responsePayload.choices?.[0]?.message?.content;
+  const verdict = JSON.parse(outputText);
+
+  if (!["you", "opponent"].includes(verdict.winner) || typeof verdict.reason !== "string") {
+    throw new Error("Groq judge returned invalid verdict payload");
   }
 
   return verdict;

@@ -140,11 +140,13 @@ It installs the Supabase CLI through `supabase/setup-cli@v2`.
 
 Vercel deploys `api/judge.js` as a serverless function. The client calls `/api/judge` first and falls back to the local deterministic judge engine when running in plain Vite preview or when the API is unavailable.
 
-When `OPENAI_API_KEY` is configured in Vercel, `/api/judge` uses the OpenAI Responses API with structured JSON output for submitted answer comparisons. `OPENAI_JUDGE_MODEL` is optional and defaults to `gpt-4o-mini`. Do not expose `OPENAI_API_KEY` through any `VITE_` environment variable.
+When `JUDGE_PROVIDER=groq` and `GROQ_API_KEY` are configured in Vercel, `/api/judge` uses Groq's OpenAI-compatible chat completions API with JSON object mode for submitted answer comparisons. `GROQ_JUDGE_MODEL` is optional and defaults to `llama-3.1-8b-instant`.
+
+OpenAI is also supported with `JUDGE_PROVIDER=openai`, `OPENAI_API_KEY`, and optional `OPENAI_JUDGE_MODEL` defaulting to `gpt-4o-mini`. Do not expose hosted AI provider keys through any `VITE_` environment variable.
 
 For free local model testing, set `JUDGE_PROVIDER=ollama`, `OLLAMA_JUDGE_URL=http://127.0.0.1:11434/api/chat`, and `OLLAMA_JUDGE_MODEL=text-judge` in `.env.local`, then run through `npm exec vercel -- dev`. Do not deploy the Ollama provider to Vercel because production functions cannot reach a model server running on this computer. See `docs/local-ai.md`.
 
-Use the server-only sync script after `.env.local` contains `OPENAI_API_KEY`:
+Use the server-only sync script after `.env.local` contains the hosted provider values:
 
 ```bash
 npm run test:vercel-server-env-sync

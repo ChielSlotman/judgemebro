@@ -57,7 +57,7 @@ function printStatus(label, ok, detail = "") {
 }
 
 const env = await readEnvExample();
-const localAiProvider = (env.JUDGE_PROVIDER || "").toLowerCase() === "ollama";
+const localAiProvider = (env.JUDGE_PROVIDER || "").toLowerCase();
 const vercel = commandExists("vercel");
 const npxVercel = commandExists("npm", ["exec", "vercel", "--", "--version"]);
 const gh = commandExists("gh");
@@ -100,13 +100,15 @@ printStatus("Supabase URL set", Boolean(env.VITE_SUPABASE_URL), ".env.local");
 printStatus("Supabase publishable key set", Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY), ".env.local");
 printStatus(
   "Local AI judge configured",
-  Boolean(env.OPENAI_API_KEY) || (localAiProvider && Boolean(env.OLLAMA_JUDGE_URL) && Boolean(env.OLLAMA_JUDGE_MODEL)),
-  localAiProvider ? "Ollama" : ".env.local",
+  Boolean(env.OPENAI_API_KEY) ||
+    (localAiProvider === "groq" && Boolean(env.GROQ_API_KEY) && Boolean(env.GROQ_JUDGE_MODEL)) ||
+    (localAiProvider === "ollama" && Boolean(env.OLLAMA_JUDGE_URL) && Boolean(env.OLLAMA_JUDGE_MODEL)),
+  localAiProvider || ".env.local",
 );
 printStatus(
-  "Hosted OpenAI judge model set",
-  localAiProvider || Boolean(env.OPENAI_JUDGE_MODEL),
-  localAiProvider ? "not needed for Ollama" : ".env.local",
+  "Hosted AI judge model set",
+  localAiProvider === "ollama" || Boolean(env.GROQ_JUDGE_MODEL) || Boolean(env.OPENAI_JUDGE_MODEL),
+  localAiProvider === "ollama" ? "not needed for Ollama" : ".env.local",
 );
 printStatus("Vercel config", existsSync(join(root, "vercel.json")));
 printStatus("GitHub CI workflow", existsSync(join(root, ".github", "workflows", "ci.yml")));

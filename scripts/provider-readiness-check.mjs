@@ -72,11 +72,12 @@ const envOutput = vercelEnv.output;
 const localAiProvider = (localEnv.JUDGE_PROVIDER || "").toLowerCase();
 const hasLocalAiJudge =
   Boolean(localEnv.OPENAI_API_KEY) ||
+  (localAiProvider === "groq" && Boolean(localEnv.GROQ_API_KEY) && Boolean(localEnv.GROQ_JUDGE_MODEL)) ||
   (localAiProvider === "ollama" && Boolean(localEnv.OLLAMA_JUDGE_URL) && Boolean(localEnv.OLLAMA_JUDGE_MODEL));
 const hasVercelSupabaseUrl = envOutput.includes("VITE_SUPABASE_URL");
 const hasVercelSupabaseKey = envOutput.includes("VITE_SUPABASE_PUBLISHABLE_KEY");
-const hasVercelOpenAiKey = envOutput.includes("OPENAI_API_KEY");
-const hasVercelOpenAiModel = envOutput.includes("OPENAI_JUDGE_MODEL");
+const hasVercelHostedAiKey = envOutput.includes("GROQ_API_KEY") || envOutput.includes("OPENAI_API_KEY");
+const hasVercelHostedAiModel = envOutput.includes("GROQ_JUDGE_MODEL") || envOutput.includes("OPENAI_JUDGE_MODEL");
 const hasApexAlias = vercelAliases.output.includes("judgemebro.com");
 const hasWwwAlias = vercelAliases.output.includes("www.judgemebro.com");
 const apexDnsReady = dns.apexA.includes(vercelIp);
@@ -99,9 +100,9 @@ printStatus(
 );
 printStatus("Vercel Supabase URL env configured", hasVercelSupabaseUrl);
 printStatus("Vercel Supabase publishable key env configured", hasVercelSupabaseKey);
-printStatus("Local AI judge configured", hasLocalAiJudge, localAiProvider === "ollama" ? "Ollama" : ".env.local");
-printStatus("Vercel OpenAI API key env configured", hasVercelOpenAiKey);
-printStatus("Vercel OpenAI judge model env configured", hasVercelOpenAiModel);
+printStatus("Local AI judge configured", hasLocalAiJudge, localAiProvider || ".env.local");
+printStatus("Vercel hosted AI API key env configured", hasVercelHostedAiKey);
+printStatus("Vercel hosted AI judge model env configured", hasVercelHostedAiModel);
 printStatus(
   "Supabase account authenticated",
   supabaseProjects.ok,

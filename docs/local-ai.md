@@ -54,4 +54,5 @@ Do not deploy `JUDGE_PROVIDER=ollama` to Vercel. A Vercel production function ca
 Use one of these production modes:
 
 - `JUDGE_PROVIDER=local` or no AI env: deterministic fallback judge.
+- `JUDGE_PROVIDER=groq` with `GROQ_API_KEY`: hosted free-plan test judge.
 - `JUDGE_PROVIDER=openai` with `OPENAI_API_KEY`: hosted AI judge.

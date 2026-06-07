@@ -38,6 +38,8 @@ delete process.env.OPENAI_API_KEY;
 delete process.env.OPENAI_JUDGE_MODEL;
 delete process.env.OPENAI_JUDGE_PROVIDER;
 delete process.env.JUDGE_PROVIDER;
+delete process.env.GROQ_API_KEY;
+delete process.env.GROQ_JUDGE_MODEL;
 delete process.env.OLLAMA_JUDGE_MODEL;
 delete process.env.OLLAMA_JUDGE_URL;
 
@@ -91,6 +93,41 @@ assert(aiResponse.payload.result.judgeModel === "openai:gpt-test", "Expected Ope
 
 delete process.env.OPENAI_API_KEY;
 delete process.env.OPENAI_JUDGE_MODEL;
+process.env.JUDGE_PROVIDER = "groq";
+process.env.GROQ_API_KEY = "groq-test-key";
+process.env.GROQ_JUDGE_MODEL = "llama-test";
+globalThis.fetch = async (url, options) => {
+  assert(String(url).includes("api.groq.com/openai/v1/chat/completions"), "Expected Groq chat completions URL");
+  const body = JSON.parse(options.body);
+  assert(body.model === "llama-test", "Expected configured Groq model");
+  assert(body.response_format.type === "json_object", "Expected Groq JSON object mode");
+  return {
+    ok: true,
+    json: async () => ({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              winner: "you",
+              reason: "You win because the response keeps value intact while offering a practical next step.",
+            }),
+          },
+        },
+      ],
+    }),
+  };
+};
+
+const groqResponse = createResponse();
+await handler({ method: "POST", body: validPayload }, groqResponse);
+assert(groqResponse.statusCode === 200, `Expected 200, received ${groqResponse.statusCode}`);
+assert(groqResponse.payload.result.youWin === true, "Expected mocked Groq judge to choose you");
+assert(groqResponse.payload.result.points === 18, "Expected ranked Groq win to add points");
+assert(groqResponse.payload.result.judgeModel === "groq:llama-test", "Expected Groq judge model");
+
+delete process.env.JUDGE_PROVIDER;
+delete process.env.GROQ_API_KEY;
+delete process.env.GROQ_JUDGE_MODEL;
 process.env.JUDGE_PROVIDER = "ollama";
 process.env.OLLAMA_JUDGE_MODEL = "text-judge-test";
 globalThis.fetch = async (url, options) => {
@@ -143,6 +180,8 @@ console.warn = originalWarn;
 delete process.env.OPENAI_API_KEY;
 delete process.env.OPENAI_JUDGE_MODEL;
 delete process.env.JUDGE_PROVIDER;
+delete process.env.GROQ_API_KEY;
+delete process.env.GROQ_JUDGE_MODEL;
 delete process.env.OLLAMA_JUDGE_MODEL;
 delete process.env.OLLAMA_JUDGE_URL;
 
