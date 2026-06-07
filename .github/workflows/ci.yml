@@ -41,6 +41,9 @@ jobs:
       - name: Vercel env sync dry run
         run: npm run test:vercel-env-sync
 
+      - name: GitHub publish dry run
+        run: npm run test:github-publish
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 

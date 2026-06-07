@@ -13,6 +13,14 @@ git remote add origin https://github.com/<owner>/judgemebro.git
 git push -u origin main
 ```
 
+Or use the checked-in helper:
+
+```bash
+npm run github:publish -- --remote https://github.com/<owner>/judgemebro.git --connect-vercel
+```
+
+`--connect-vercel` runs `vercel git connect` after the push so the linked Vercel project can receive GitHub-triggered builds.
+
 Run:
 
 ```bash
@@ -50,6 +58,7 @@ CI checks:
 - `npm run test:judge`
 - `npm run test:supabase`
 - `npm run test:workflows`
+- `npm run test:github-publish`
 - `npm run test:smoke`
 
 Manual workflows:

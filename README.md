@@ -74,6 +74,14 @@ npm run sync:vercel-env
 
 Use this after `.env.local` contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The sync script never sends `SUPABASE_SERVICE_ROLE_KEY`.
 
+## GitHub Publish
+
+```bash
+npm run github:publish -- --remote https://github.com/<owner>/judgemebro.git --connect-vercel
+```
+
+Use this after creating the GitHub repository. It adds `origin`, pushes `main`, and can connect the linked Vercel project to the GitHub remote.
+
 ## Setup Docs
 
 - Supabase schema and RLS notes: `docs/supabase.md`

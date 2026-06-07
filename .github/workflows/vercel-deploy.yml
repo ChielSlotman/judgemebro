@@ -40,6 +40,7 @@ jobs:
           npm run test:workflows
           npm run test:docs
           npm run test:vercel-env-sync
+          npm run test:github-publish
 
       - name: Pull Vercel environment
         run: npx vercel@${{ env.VERCEL_CLI_VERSION }} pull --yes --environment=${{ inputs.production == 'true' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
