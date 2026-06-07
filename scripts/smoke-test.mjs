@@ -233,7 +233,7 @@ async function run() {
     await assertVisible(page, "Room BRO9", "viewer deep link code");
     await assertAnyVisible(
       page,
-      ["Synced with the streamer room", "Preview mode", "Room not live yet", "Could not refresh room state"],
+      ["Connected to the live room", "Synced with the streamer room", "Preview mode", "Room not live yet", "Could not refresh room state"],
       "viewer room sync status",
     );
 
