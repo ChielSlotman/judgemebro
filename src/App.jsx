@@ -24,6 +24,9 @@ import {
   Shield,
   Swords,
   Trophy,
+  Mic,
+  MicOff,
+  Volume2,
   Users,
   X,
 } from "lucide-react";
@@ -61,6 +64,8 @@ const iconMap = {
 const MAX_CHARS = 280;
 const DEFAULT_FRIEND_ROOM = "V7P2";
 const DEFAULT_STREAM_ROOM = "BRO9";
+const VOICE_SUPPORT =
+  typeof window !== "undefined" && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 
 function clampAnswer(value) {
   return value.slice(0, MAX_CHARS);
@@ -125,6 +130,18 @@ function pickCommentatorVoice() {
 
   const voices = window.speechSynthesis.getVoices();
   const englishVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith("en"));
+  const premiumHints = [
+    /natural/i,
+    /neural/i,
+    /enhanced/i,
+    /premium/i,
+    /online/i,
+    /guy/i,
+    /ryan/i,
+    /liam/i,
+    /brian/i,
+    /aaron/i,
+  ];
   const maleVoiceHints = [
     /\bdavid\b/i,
     /\bdaniel\b/i,
@@ -137,28 +154,137 @@ function pickCommentatorVoice() {
 
   const score = (voice) => {
     const name = voice.name || "";
+    const premium = premiumHints.some((pattern) => pattern.test(name)) ? 35 : 0;
     const hinted = maleVoiceHints.some((pattern) => pattern.test(name)) ? 20 : 0;
     const englishUs = voice.lang.toLowerCase().startsWith("en-us") ? 2 : 0;
-    return hinted + englishUs + (voice.default ? 1 : 0);
+    const localPenalty = voice.localService ? 0 : 4;
+    return premium + hinted + englishUs + localPenalty + (voice.default ? 1 : 0);
   };
 
   return [...(englishVoices.length ? englishVoices : voices)].sort((a, b) => score(b) - score(a))[0] ?? null;
 }
 
 function speakVerdict(result) {
-  if (typeof window === "undefined" || !window.speechSynthesis || !result) return;
+  if (typeof window === "undefined" || !result) return;
 
-  window.speechSynthesis.cancel();
+  window.speechSynthesis?.cancel?.();
   const verdict = result.youWin ? "You win." : "You lose.";
   const points = result.mode === "bot" ? "Unranked bot battle." : `${result.points > 0 ? "Plus" : "Minus"} ${Math.abs(result.points)} points.`;
-  const utterance = new SpeechSynthesisUtterance(`${verdict} ${points} ${result.reason}`);
+  const narration = `${verdict} ${points} ${result.reason}`;
+
+  playHostedVerdict(narration).catch(() => {
+    speakBrowserVerdict(narration);
+  });
+}
+
+async function playHostedVerdict(narration) {
+  if (import.meta.env.VITE_HOSTED_TTS_ENABLED !== "true") {
+    throw new Error("Hosted TTS is disabled");
+  }
+
+  if (["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)) {
+    throw new Error("Hosted TTS is only available on deployment");
+  }
+
+  const response = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ input: narration }),
+  });
+
+  if (!response.ok) throw new Error("Hosted TTS unavailable");
+  const audioBlob = await response.blob();
+  const audioUrl = URL.createObjectURL(audioBlob);
+  const audio = new Audio(audioUrl);
+  audio.onended = () => URL.revokeObjectURL(audioUrl);
+  audio.onerror = () => URL.revokeObjectURL(audioUrl);
+  await audio.play();
+}
+
+function speakBrowserVerdict(narration) {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+
+  const utterance = new SpeechSynthesisUtterance(narration);
   const voice = pickCommentatorVoice();
   if (voice) utterance.voice = voice;
   utterance.lang = voice?.lang || "en-US";
-  utterance.rate = 0.96;
-  utterance.pitch = 0.72;
+  utterance.rate = 0.93;
+  utterance.pitch = 0.68;
   utterance.volume = 1;
   window.speechSynthesis.speak(utterance);
+}
+
+function useVoiceInput(setValue) {
+  const [isListening, setIsListening] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState(VOICE_SUPPORT ? "" : "Voice input is not available in this browser.");
+  const recognitionRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort?.();
+    };
+  }, []);
+
+  function startListening() {
+    if (!VOICE_SUPPORT) {
+      setVoiceStatus("Voice input is not available in this browser.");
+      return;
+    }
+    if (isListening) return;
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    recognition.lang = "en-US";
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+    let lastTranscript = "";
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceStatus("Listening...");
+    };
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+      for (let index = event.resultIndex; index < event.results.length; index += 1) {
+        transcript = `${transcript} ${event.results[index][0]?.transcript || ""}`.trim();
+      }
+      if (!transcript || transcript === lastTranscript) return;
+      lastTranscript = transcript;
+      setValue((current) => clampAnswer(`${current ? `${current.trim()} ` : ""}${transcript.trim()}`));
+    };
+
+    recognition.onerror = (event) => {
+      setVoiceStatus(event.error === "not-allowed" ? "Mic permission blocked." : "Voice input stopped.");
+      setIsListening(false);
+      recognitionRef.current = null;
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setVoiceStatus(lastTranscript ? "Voice added." : "");
+      recognitionRef.current = null;
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  }
+
+  function stopListening() {
+    recognitionRef.current?.stop?.();
+    setIsListening(false);
+  }
+
+  function toggleListening() {
+    if (isListening) {
+      stopListening();
+      return;
+    }
+    startListening();
+  }
+
+  return { isListening, voiceStatus, toggleListening, voiceSupported: VOICE_SUPPORT };
 }
 
 function BrandHeader({ onHome, onProfile, onLeave, compact = false }) {
@@ -373,6 +499,7 @@ function BattleScreen({
   opponentRating = "1135",
 }) {
   const scenario = getScenario(category.id);
+  const { isListening, voiceStatus, toggleListening, voiceSupported } = useVoiceInput(setAnswer);
 
   return (
     <main className="screen battle-screen">
@@ -446,8 +573,21 @@ function BattleScreen({
           placeholder="Type your answer..."
           aria-label="Your answer"
         />
-        <span>{answer.length}/{MAX_CHARS}</span>
+        <div className="answer-controls">
+          <button
+            className={`voice-button ${isListening ? "listening" : ""}`}
+            type="button"
+            disabled={!voiceSupported}
+            onClick={toggleListening}
+            aria-label={isListening ? "Stop voice input" : "Start voice input"}
+          >
+            {isListening ? <MicOff size={19} /> : <Mic size={19} />}
+            {isListening ? "Stop" : "Speak"}
+          </button>
+          <span>{answer.length}/{MAX_CHARS}</span>
+        </div>
       </section>
+      {voiceStatus ? <p className={`voice-status ${isListening ? "active" : ""}`}>{voiceStatus}</p> : null}
 
       <button className="primary-button judge" type="button" disabled={answer.trim().length === 0} onClick={onSubmit}>
         <Gavel size={32} />
@@ -523,7 +663,10 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
 
       <section className="reason-box">
         <Gavel size={24} />
-        <p>{result.reason}</p>
+        <div>
+          <p>{result.reason}</p>
+          <small>Voice verdict is AI-generated.</small>
+        </div>
       </section>
 
       <section className="cta-stack">
@@ -537,6 +680,10 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
           </button>
           <button className="outline-button coral" type="button" onClick={onShare}>
             Share verdict
+          </button>
+          <button className="outline-button" type="button" onClick={() => speakVerdict(result)}>
+            <Volume2 size={22} />
+            Replay voice
           </button>
         </div>
       </section>
@@ -823,6 +970,7 @@ function ViewerScreen({ roomCode, category, onHome }) {
   const [name, setName] = useState("Viewer 27");
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const { isListening, voiceStatus, toggleListening, voiceSupported } = useVoiceInput(setAnswer);
   const currentScenario = getScenario(category.id);
 
   function submitViewerAnswer() {
@@ -864,6 +1012,16 @@ function ViewerScreen({ roomCode, category, onHome }) {
           />
           <span>{answer.length}/{MAX_CHARS}</span>
         </label>
+        <button
+          className={`voice-button wide ${isListening ? "listening" : ""}`}
+          type="button"
+          disabled={submitted || !voiceSupported}
+          onClick={toggleListening}
+        >
+          {isListening ? <MicOff size={19} /> : <Mic size={19} />}
+          {isListening ? "Stop voice input" : "Speak answer"}
+        </button>
+        {voiceStatus ? <p className={`voice-status ${isListening ? "active" : ""}`}>{voiceStatus}</p> : null}
         <button className="primary-button lime" type="button" disabled={submitted || answer.trim().length === 0} onClick={submitViewerAnswer}>
           <Send size={24} />
           {submitted ? "Answer submitted" : "Submit to streamer"}

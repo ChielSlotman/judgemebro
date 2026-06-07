@@ -775,13 +775,62 @@ button:disabled {
   color: rgba(255, 255, 255, 0.38);
 }
 
-.answer-box span {
+.answer-controls {
   position: absolute;
-  right: 18px;
-  bottom: 16px;
+  left: 16px;
+  right: 16px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.answer-controls span {
   color: var(--muted);
   font-size: 15px;
   font-weight: 700;
+}
+
+.voice-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 13px;
+  border: 1px solid rgba(184, 255, 0, 0.36);
+  border-radius: 999px;
+  background: rgba(184, 255, 0, 0.12);
+  color: var(--lime);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.voice-button.wide {
+  width: 100%;
+  min-height: 48px;
+}
+
+.voice-button.listening {
+  border-color: rgba(255, 47, 102, 0.72);
+  background: rgba(255, 47, 102, 0.16);
+  color: var(--coral);
+  box-shadow: 0 0 28px rgba(255, 47, 102, 0.22);
+}
+
+.voice-status {
+  margin: 9px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.voice-status.active {
+  color: var(--lime);
 }
 
 .battle-screen .primary-button.judge {
@@ -1084,6 +1133,15 @@ button:disabled {
   margin: 0;
   font-size: 15px;
   line-height: 1.45;
+}
+
+.reason-box small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted-2);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
 }
 
 .link-box {
