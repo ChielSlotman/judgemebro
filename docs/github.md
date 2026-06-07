@@ -54,12 +54,8 @@ After the first push, GitHub should run `.github/workflows/ci.yml` on `main` and
 CI checks:
 
 - `npm ci`
-- `npm run build`
-- `npm run test:judge`
-- `npm run test:supabase`
-- `npm run test:workflows`
-- `npm run test:github-publish`
-- `npm run test:smoke`
+- `npx playwright install --with-deps chromium`
+- `npm run verify`
 
 Manual workflows:
 

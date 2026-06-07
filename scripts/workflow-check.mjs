@@ -9,15 +9,8 @@ const workflowChecks = [
     requirements: [
       "npm ci",
       "node-version: 24",
-      "npm run build",
-      "npm run test:judge",
-      "npm run test:supabase",
-      "npm run test:supabase-migrate",
-      "npm run test:workflows",
-      "npm run test:docs",
-      "npm run test:vercel-env-sync",
-      "npm run test:github-publish",
-      "npm run test:smoke",
+      "npx playwright install --with-deps chromium",
+      "npm run verify",
     ],
   },
   {

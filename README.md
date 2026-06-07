@@ -37,17 +37,12 @@ npm run build
 ## Smoke Test
 
 ```bash
-npm run test:judge
-npm run test:supabase
-npm run test:workflows
-npm run test:deployment
-npm run test:docs
-npm run test:vercel-env-sync
-npm run test:supabase-migrate
-npm run test:smoke
+npm run verify
 ```
 
-The judge test validates the Vercel API contract. The Supabase test statically checks that public tables have RLS and policies, that Realtime tables are published, and that the service-role key is not referenced by client source. The workflow test checks the GitHub CI, Vercel deploy, and Supabase migration workflow contracts. The deployment test checks the live Vercel app, live judge API, and reports custom-domain DNS status. The docs test checks that provider handoff docs are present and linked. The Vercel env sync test dry-runs the Supabase client env sync and confirms the service-role key is ignored. The Supabase migration test confirms the migration helper command plan. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
+`verify` runs the normal passing repo checks: judge API contract, Supabase schema/config contract, Supabase migration helper plan, GitHub workflow contract, docs contract, Vercel env sync dry run, GitHub publish dry run, live deployment check, setup check, production build, and the full smoke flow.
+
+`launch:audit` remains separate because it is expected to fail until external GitHub, DNS, and Supabase account setup is complete.
 
 ## Setup Check
 

@@ -72,12 +72,8 @@ On this Windows machine, `vercel build` can fail locally with `spawn cmd.exe ENO
 
 ```bash
 npm ci
-npm run build
-npm run test:judge
-npm run test:supabase
-npm run test:workflows
 npx playwright install --with-deps chromium
-npm run test:smoke
+npm run verify
 ```
 
 ## GitHub Vercel Deploy Workflow

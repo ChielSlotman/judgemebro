@@ -23,32 +23,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build
-        run: npm run build
-
-      - name: Judge API contract test
-        run: npm run test:judge
-
-      - name: Supabase schema check
-        run: npm run test:supabase
-
-      - name: Supabase migration helper check
-        run: npm run test:supabase-migrate
-
-      - name: Workflow contract check
-        run: npm run test:workflows
-
-      - name: Docs contract check
-        run: npm run test:docs
-
-      - name: Vercel env sync dry run
-        run: npm run test:vercel-env-sync
-
-      - name: GitHub publish dry run
-        run: npm run test:github-publish
-
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
-      - name: Smoke test
-        run: npm run test:smoke
+      - name: Verify
+        run: npm run verify

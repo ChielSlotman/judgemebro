@@ -14,6 +14,7 @@
     "test:docs": "node scripts/docs-check.mjs",
     "test:vercel-env-sync": "node scripts/sync-vercel-env.mjs --dry-run --env-file scripts/fixtures/supabase-client.env",
     "test:smoke": "node scripts/smoke-test.mjs",
+    "verify": "node scripts/verify.mjs",
     "check:providers": "node scripts/provider-readiness-check.mjs",
     "launch:audit": "node scripts/launch-audit.mjs",
     "sync:vercel-env": "node scripts/sync-vercel-env.mjs",
