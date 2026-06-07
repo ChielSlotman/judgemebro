@@ -51,9 +51,10 @@ The judge test validates the Vercel API contract. The Supabase test statically c
 
 ```bash
 npm run setup:check
+npm run check:providers
 ```
 
-Use this before pushing/deploying to see whether GitHub, Vercel, and Supabase local setup is complete.
+Use `setup:check` for local repo readiness. Use `check:providers` for account-side GitHub, Vercel, custom-domain DNS, and Supabase readiness.
 
 ## Setup Docs
 

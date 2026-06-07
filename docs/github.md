@@ -63,6 +63,7 @@ After GitHub is connected:
 
 ```bash
 npm run test:workflows
+npm run check:providers
 npm run setup:check
 ```
 

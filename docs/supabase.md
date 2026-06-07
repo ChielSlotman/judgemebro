@@ -67,9 +67,10 @@ Run:
 ```bash
 npm run test:supabase
 npm run setup:check
+npm run check:providers
 ```
 
-`test:supabase` statically verifies the local migrations for the prototype security and Realtime invariants. `setup:check` reports whether Git remotes, Vercel CLI/linking, GitHub CLI, Supabase CLI, and Supabase env vars are present.
+`test:supabase` statically verifies the local migrations for the prototype security and Realtime invariants. `setup:check` reports whether local Git, Vercel, and Supabase tooling is present. `check:providers` reports whether account-side Vercel env vars, custom-domain DNS, GitHub remote, and Supabase auth are complete.
 
 ## GitHub Migration Workflow
 

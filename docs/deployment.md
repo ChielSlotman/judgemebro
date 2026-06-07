@@ -36,6 +36,7 @@ ns2.vercel-dns.com
 After DNS changes propagate, run:
 
 ```bash
+npm run check:providers
 npm run test:deployment
 ```
 
