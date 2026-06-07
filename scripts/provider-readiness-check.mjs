@@ -1,5 +1,6 @@
 import { resolve4, resolveCname } from "node:dns/promises";
 import { existsSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -53,8 +54,25 @@ const vercelEnv = run("npm", ["exec", "vercel", "--", "env", "ls"]);
 const vercelAliases = run("npm", ["exec", "vercel", "--", "alias", "list"]);
 const supabaseProjects = run("npm", ["exec", "supabase", "--", "projects", "list"]);
 const dns = await dnsState();
+let localEnv = {};
+try {
+  localEnv = Object.fromEntries(
+    readFileSync(join(root, ".env.local"), "utf8")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line && !line.startsWith("#") && line.includes("="))
+      .map((line) => {
+        const index = line.indexOf("=");
+        return [line.slice(0, index), line.slice(index + 1)];
+      }),
+  );
+} catch {}
 
 const envOutput = vercelEnv.output;
+const localAiProvider = (localEnv.JUDGE_PROVIDER || "").toLowerCase();
+const hasLocalAiJudge =
+  Boolean(localEnv.OPENAI_API_KEY) ||
+  (localAiProvider === "ollama" && Boolean(localEnv.OLLAMA_JUDGE_URL) && Boolean(localEnv.OLLAMA_JUDGE_MODEL));
 const hasVercelSupabaseUrl = envOutput.includes("VITE_SUPABASE_URL");
 const hasVercelSupabaseKey = envOutput.includes("VITE_SUPABASE_PUBLISHABLE_KEY");
 const hasVercelOpenAiKey = envOutput.includes("OPENAI_API_KEY");
@@ -81,6 +99,7 @@ printStatus(
 );
 printStatus("Vercel Supabase URL env configured", hasVercelSupabaseUrl);
 printStatus("Vercel Supabase publishable key env configured", hasVercelSupabaseKey);
+printStatus("Local AI judge configured", hasLocalAiJudge, localAiProvider === "ollama" ? "Ollama" : ".env.local");
 printStatus("Vercel OpenAI API key env configured", hasVercelOpenAiKey);
 printStatus("Vercel OpenAI judge model env configured", hasVercelOpenAiModel);
 printStatus(

@@ -142,19 +142,30 @@ export async function createFriendBattleRoom({ roomCode, category, prompt, hostN
   const playerPresenceId = presenceId();
   const { data, error } = await supabase
     .from("friend_battle_rooms")
-    .insert({
-      room_code: roomCode,
-      category_id: category.id,
-      prompt,
-      host_presence_id: playerPresenceId,
-      host_name: hostName,
-      status: "waiting",
-    })
+    .upsert(
+      {
+        room_code: roomCode,
+        category_id: category.id,
+        prompt,
+        host_presence_id: playerPresenceId,
+        guest_presence_id: null,
+        host_name: hostName,
+        guest_name: null,
+        host_submitted: false,
+        guest_submitted: false,
+        ai_winner_presence_id: null,
+        ai_reason: null,
+        point_delta: 18,
+        status: "waiting",
+        expires_at: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      },
+      { onConflict: "room_code" },
+    )
     .select()
     .single();
 
   if (error) {
-    console.warn("Supabase friend room create failed", error);
+    console.warn("Supabase friend room upsert failed", error);
     return { error };
   }
 

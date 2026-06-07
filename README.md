@@ -79,6 +79,8 @@ Use this after `.env.local` contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBL
 
 The judge API can use a real server-side AI judge when `OPENAI_API_KEY` is set in Vercel. Keep it server-only; never add it as a `VITE_` variable. Use `npm run sync:vercel-server-env` after adding `OPENAI_API_KEY` to `.env.local`.
 
+For free local judge testing, start `D:\LocalAI\start-ollama.cmd`, set `JUDGE_PROVIDER=ollama`, and run with `npm exec vercel -- dev`. See `docs/local-ai.md`.
+
 ## GitHub Publish
 
 ```bash
@@ -100,5 +102,6 @@ Use this after creating the GitHub repository manually. It adds `origin`, pushes
 - Vercel and GitHub CI notes: `docs/deployment.md`
 - Custom domain DNS setup: `docs/domain.md`
 - GitHub remote and secrets setup: `docs/github.md`
+- Local/free Ollama judge setup: `docs/local-ai.md`
 - Creative production brief and generated prompt pack: `docs/creative-production.md`
 - Design QA report: `design-qa.md`

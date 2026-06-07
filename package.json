@@ -26,7 +26,7 @@
     "github:create": "node scripts/github-create-repo.mjs",
     "test:github-create": "node scripts/github-create-repo.mjs --dry-run --name judgemebro",
     "github:publish": "node scripts/github-publish.mjs",
-    "test:github-publish": "node scripts/github-publish.mjs --dry-run --remote https://github.com/example/judgemebro.git --connect-vercel",
+    "test:github-publish": "node scripts/github-publish.mjs --dry-run --remote https://github.com/ChielSlotman/judgemebro.git --connect-vercel",
     "supabase:migrate": "node scripts/supabase-migrate.mjs",
     "test:supabase-migrate": "node scripts/supabase-migrate.mjs --plan-only --project-ref example-project-ref",
     "setup:check": "node scripts/setup-check.mjs"

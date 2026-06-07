@@ -57,6 +57,7 @@ function printStatus(label, ok, detail = "") {
 }
 
 const env = await readEnvExample();
+const localAiProvider = (env.JUDGE_PROVIDER || "").toLowerCase() === "ollama";
 const vercel = commandExists("vercel");
 const npxVercel = commandExists("npm", ["exec", "vercel", "--", "--version"]);
 const gh = commandExists("gh");
@@ -97,8 +98,16 @@ printStatus(
 );
 printStatus("Supabase URL set", Boolean(env.VITE_SUPABASE_URL), ".env.local");
 printStatus("Supabase publishable key set", Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY), ".env.local");
-printStatus("OpenAI API key set", Boolean(env.OPENAI_API_KEY), ".env.local");
-printStatus("OpenAI judge model set", Boolean(env.OPENAI_JUDGE_MODEL), ".env.local");
+printStatus(
+  "Local AI judge configured",
+  Boolean(env.OPENAI_API_KEY) || (localAiProvider && Boolean(env.OLLAMA_JUDGE_URL) && Boolean(env.OLLAMA_JUDGE_MODEL)),
+  localAiProvider ? "Ollama" : ".env.local",
+);
+printStatus(
+  "Hosted OpenAI judge model set",
+  localAiProvider || Boolean(env.OPENAI_JUDGE_MODEL),
+  localAiProvider ? "not needed for Ollama" : ".env.local",
+);
 printStatus("Vercel config", existsSync(join(root, "vercel.json")));
 printStatus("GitHub CI workflow", existsSync(join(root, ".github", "workflows", "ci.yml")));
 printStatus("GitHub Vercel deploy workflow", existsSync(join(root, ".github", "workflows", "vercel-deploy.yml")));

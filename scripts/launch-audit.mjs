@@ -89,6 +89,7 @@ async function liveDeploymentReady() {
 }
 
 const localEnv = await readLocalEnv();
+const localAiProvider = (localEnv.JUDGE_PROVIDER || "").toLowerCase();
 const dns = await dnsState();
 const gitRemote = run("git", ["remote", "-v"]);
 const vercelWhoami = run("npm", ["exec", "vercel", "--", "whoami"]);
@@ -149,9 +150,11 @@ const checks = [
     detail: ".env.local",
   },
   {
-    label: "Local OpenAI API key configured",
-    ok: Boolean(localEnv.OPENAI_API_KEY),
-    detail: ".env.local",
+    label: "Local AI judge configured",
+    ok:
+      Boolean(localEnv.OPENAI_API_KEY) ||
+      (localAiProvider === "ollama" && Boolean(localEnv.OLLAMA_JUDGE_URL) && Boolean(localEnv.OLLAMA_JUDGE_MODEL)),
+    detail: localAiProvider === "ollama" ? "Ollama" : ".env.local",
   },
   {
     label: "Vercel Supabase URL env configured",

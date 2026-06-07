@@ -6,8 +6,11 @@ const text = readFileSync(join(root, ".env.example"), "utf8");
 const requiredKeys = [
   "VITE_SUPABASE_URL",
   "VITE_SUPABASE_PUBLISHABLE_KEY",
+  "JUDGE_PROVIDER",
   "OPENAI_API_KEY",
   "OPENAI_JUDGE_MODEL",
+  "OLLAMA_JUDGE_URL",
+  "OLLAMA_JUDGE_MODEL",
 ];
 const failures = [];
 

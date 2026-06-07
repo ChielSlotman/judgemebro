@@ -8,6 +8,7 @@ const requiredDocs = [
   "docs/domain.md",
   "docs/supabase.md",
   "docs/github.md",
+  "docs/local-ai.md",
   "docs/creative-production.md",
   "design-qa.md",
 ];

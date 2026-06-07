@@ -37,6 +37,9 @@ const validPayload = {
 delete process.env.OPENAI_API_KEY;
 delete process.env.OPENAI_JUDGE_MODEL;
 delete process.env.OPENAI_JUDGE_PROVIDER;
+delete process.env.JUDGE_PROVIDER;
+delete process.env.OLLAMA_JUDGE_MODEL;
+delete process.env.OLLAMA_JUDGE_URL;
 
 const response = createResponse();
 await handler({ method: "POST", body: validPayload }, response);
@@ -86,6 +89,39 @@ assert(aiResponse.payload.result.youWin === false, "Expected mocked AI judge to 
 assert(aiResponse.payload.result.points === -18, "Expected ranked AI loss to subtract points");
 assert(aiResponse.payload.result.judgeModel === "openai:gpt-test", "Expected OpenAI judge model");
 
+delete process.env.OPENAI_API_KEY;
+delete process.env.OPENAI_JUDGE_MODEL;
+process.env.JUDGE_PROVIDER = "ollama";
+process.env.OLLAMA_JUDGE_MODEL = "text-judge-test";
+globalThis.fetch = async (url, options) => {
+  assert(String(url).includes("11434/api/chat"), "Expected Ollama chat API URL");
+  const body = JSON.parse(options.body);
+  assert(body.model === "text-judge-test", "Expected configured Ollama model");
+  assert(body.format.type === "object", "Expected Ollama structured output schema");
+  return {
+    ok: true,
+    json: async () => ({
+      message: {
+        content: JSON.stringify({
+          winner: "you",
+          reason: "You win because the response protects value while keeping the conversation open.",
+        }),
+      },
+    }),
+  };
+};
+
+const ollamaResponse = createResponse();
+await handler({ method: "POST", body: validPayload }, ollamaResponse);
+assert(ollamaResponse.statusCode === 200, `Expected 200, received ${ollamaResponse.statusCode}`);
+assert(ollamaResponse.payload.result.youWin === true, "Expected mocked Ollama judge to choose you");
+assert(ollamaResponse.payload.result.points === 18, "Expected ranked Ollama win to add points");
+assert(ollamaResponse.payload.result.judgeModel === "ollama:text-judge-test", "Expected Ollama judge model");
+
+delete process.env.JUDGE_PROVIDER;
+delete process.env.OLLAMA_JUDGE_MODEL;
+process.env.OPENAI_API_KEY = "test-key";
+process.env.OPENAI_JUDGE_MODEL = "gpt-test";
 globalThis.fetch = async () => ({
   ok: false,
   status: 500,
@@ -106,5 +142,8 @@ globalThis.fetch = originalFetch;
 console.warn = originalWarn;
 delete process.env.OPENAI_API_KEY;
 delete process.env.OPENAI_JUDGE_MODEL;
+delete process.env.JUDGE_PROVIDER;
+delete process.env.OLLAMA_JUDGE_MODEL;
+delete process.env.OLLAMA_JUDGE_URL;
 
 console.log("Judge API contract passed");

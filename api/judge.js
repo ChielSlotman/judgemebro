@@ -3,6 +3,8 @@ import { judgeAnswers } from "../src/lib/judgeEngine.js";
 const MAX_CHARS = 280;
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
 const DEFAULT_OPENAI_MODEL = "gpt-4o-mini";
+const DEFAULT_OLLAMA_URL = "http://127.0.0.1:11434/api/chat";
+const DEFAULT_OLLAMA_MODEL = "text-judge";
 
 export default async function handler(request, response) {
   if (request.method !== "POST") {
@@ -25,12 +27,36 @@ export default async function handler(request, response) {
 async function judgeWithConfiguredProvider(payload) {
   const localResult = judgeAnswers(payload);
 
-  if (!shouldUseOpenAIJudge() || shouldSkipAiJudge(localResult)) {
+  if (shouldSkipAiJudge(localResult)) {
     return localResult;
   }
 
+  if (shouldUseOllamaJudge()) {
+    return judgeWithProvider({
+      payload,
+      localResult,
+      providerName: "Ollama judge",
+      modelName: `ollama:${process.env.OLLAMA_JUDGE_MODEL || DEFAULT_OLLAMA_MODEL}`,
+      requestVerdict: requestOllamaJudge,
+    });
+  }
+
+  if (!shouldUseOpenAIJudge()) {
+    return localResult;
+  }
+
+  return judgeWithProvider({
+    payload,
+    localResult,
+    providerName: "OpenAI judge",
+    modelName: `openai:${process.env.OPENAI_JUDGE_MODEL || DEFAULT_OPENAI_MODEL}`,
+    requestVerdict: requestOpenAIJudge,
+  });
+}
+
+async function judgeWithProvider({ payload, localResult, providerName, modelName, requestVerdict }) {
   try {
-    const aiVerdict = await requestOpenAIJudge(payload);
+    const aiVerdict = await requestVerdict(payload);
     const youWin = aiVerdict.winner === "you";
     const points = payload.mode === "bot" || payload.mode === "streamer" ? 0 : youWin ? 18 : -18;
 
@@ -39,10 +65,10 @@ async function judgeWithConfiguredProvider(payload) {
       youWin,
       points,
       reason: aiVerdict.reason,
-      judgeModel: `openai:${process.env.OPENAI_JUDGE_MODEL || DEFAULT_OPENAI_MODEL}`,
+      judgeModel: modelName,
     };
   } catch (error) {
-    console.warn("OpenAI judge failed, falling back to deterministic judge", error);
+    console.warn(`${providerName} failed, falling back to deterministic judge`, error);
     return {
       ...localResult,
       judgeModel: `${localResult.judgeModel}:fallback`,
@@ -51,7 +77,17 @@ async function judgeWithConfiguredProvider(payload) {
 }
 
 function shouldUseOpenAIJudge() {
-  return Boolean(process.env.OPENAI_API_KEY) && process.env.OPENAI_JUDGE_PROVIDER !== "local";
+  return Boolean(process.env.OPENAI_API_KEY) && providerName() === "openai";
+}
+
+function shouldUseOllamaJudge() {
+  return providerName() === "ollama";
+}
+
+function providerName() {
+  return (process.env.JUDGE_PROVIDER || process.env.OPENAI_JUDGE_PROVIDER || (process.env.OPENAI_API_KEY ? "openai" : "local"))
+    .toLowerCase()
+    .trim();
 }
 
 function shouldSkipAiJudge(localResult) {
@@ -126,6 +162,76 @@ async function requestOpenAIJudge(payload) {
   }
 
   return verdict;
+}
+
+async function requestOllamaJudge(payload) {
+  const model = process.env.OLLAMA_JUDGE_MODEL || DEFAULT_OLLAMA_MODEL;
+  const ollamaResponse = await fetch(process.env.OLLAMA_JUDGE_URL || DEFAULT_OLLAMA_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      stream: false,
+      format: judgeVerdictSchema(),
+      options: {
+        temperature: 0,
+      },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are the fair judge for judgemebro.com, a fast 1v1 decision game. Pick the better short answer. Reward practical judgment, boundaries, clarity, confidence without cruelty, and a useful next step. Do not reward roasting, unsafe advice, manipulation, or empty bravado. Return JSON only.",
+        },
+        {
+          role: "user",
+          content: JSON.stringify({
+            mode: payload.mode ?? "ranked",
+            category: payload.category,
+            prompt: payload.prompt,
+            you: payload.yourAnswer,
+            opponentName: payload.opponent ?? "Opponent",
+            opponent: payload.opponentAnswer,
+          }),
+        },
+      ],
+    }),
+  });
+
+  if (!ollamaResponse.ok) {
+    const errorText = await ollamaResponse.text();
+    throw new Error(`Ollama judge HTTP ${ollamaResponse.status}: ${errorText}`);
+  }
+
+  const responsePayload = await ollamaResponse.json();
+  const outputText = responsePayload.message?.content;
+  const verdict = JSON.parse(outputText);
+
+  if (!["you", "opponent"].includes(verdict.winner) || typeof verdict.reason !== "string") {
+    throw new Error("Ollama judge returned invalid verdict payload");
+  }
+
+  return verdict;
+}
+
+function judgeVerdictSchema() {
+  return {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      winner: {
+        type: "string",
+        enum: ["you", "opponent"],
+      },
+      reason: {
+        type: "string",
+        minLength: 20,
+        maxLength: 240,
+      },
+    },
+    required: ["winner", "reason"],
+  };
 }
 
 function extractResponseText(responsePayload) {
