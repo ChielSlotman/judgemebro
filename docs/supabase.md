@@ -24,6 +24,14 @@ The sync script only sends `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KE
 
 ## Schema
 
+The Supabase CLI config is in:
+
+```text
+supabase/config.toml
+```
+
+It uses local Vite auth redirects and includes the Vercel/custom-domain URLs. Seed loading is disabled until a checked-in seed file exists.
+
 The initial schema is in:
 
 ```text
