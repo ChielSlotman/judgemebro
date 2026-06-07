@@ -74,6 +74,8 @@ npm run check:providers
 For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes create preview deployments. Production should deploy from `main`.
 GitHub remote and repository secret setup is tracked in `docs/github.md`.
 
+The GitHub deploy workflow pulls environment variables from Vercel before building. Keep Supabase client values and `OPENAI_API_KEY` configured in Vercel so previews and production use the same provider setup as the dashboard deployment.
+
 On this Windows machine, `vercel build` can fail locally with `spawn cmd.exe ENOENT` even when `npm run build` succeeds. Use `vercel deploy` for cloud builds, or run the prebuilt workflow in GitHub Actions/Linux.
 
 ## GitHub CI

@@ -58,6 +58,7 @@ Add these repository secrets for the manual Vercel deploy workflow:
 - `VERCEL_PROJECT_ID`
 
 The current Vercel project values are in local `.vercel/project.json`, which is gitignored.
+Provider runtime values such as `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `OPENAI_API_KEY`, and `OPENAI_JUDGE_MODEL` belong in Vercel environment variables, not GitHub repository secrets. The manual Vercel deploy workflow pulls them from Vercel before building.
 
 Add these repository secrets for the manual Supabase migration workflow:
 
