@@ -1,4 +1,4 @@
-import { DAILY_RANKED_BATTLES, resolveDailyBattlesLeft } from "../src/lib/dailyAllowance.js";
+import { DAILY_RANKED_BATTLES, canStartRatedBattle, resolveDailyBattlesLeft } from "../src/lib/dailyAllowance.js";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -18,5 +18,11 @@ assert(
   resolveDailyBattlesLeft({ storedDate: "", storedBattlesLeft: Number.NaN, today: "2026-06-07" }) === DAILY_RANKED_BATTLES,
   "Expected missing allowance to use the daily default",
 );
+
+assert(canStartRatedBattle("ranked", 1), "Expected ranked battle to start with allowance");
+assert(!canStartRatedBattle("ranked", 0), "Expected ranked battle to stop at zero allowance");
+assert(!canStartRatedBattle("friend", 0), "Expected friend battle to stop at zero allowance");
+assert(canStartRatedBattle("bot", 0), "Expected bot battle to ignore ranked allowance");
+assert(canStartRatedBattle("streamer", 0), "Expected streamer battle to ignore ranked allowance");
 
 console.log("Daily allowance check passed");

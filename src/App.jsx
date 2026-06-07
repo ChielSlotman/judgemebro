@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { bots, categories, scenarios } from "./data.js";
 import { getBotAnswer } from "./lib/botEngine.js";
-import { DAILY_RANKED_BATTLES, resolveDailyBattlesLeft } from "./lib/dailyAllowance.js";
+import { DAILY_RANKED_BATTLES, canStartRatedBattle, resolveDailyBattlesLeft } from "./lib/dailyAllowance.js";
 import {
   createFriendBattleRoom,
   createStreamerRoom,
@@ -1013,12 +1013,13 @@ function verdictShareText(result, rating) {
   ].join("\n");
 }
 
-function ResultScreen({ result, rating, onRematch, onNew, onHome }) {
+function ResultScreen({ result, rating, battlesLeft, onRematch, onRewards, onNew, onHome }) {
   const [shareStatus, setShareStatus] = useState("");
   const [shareText, setShareText] = useState("");
   const delta = result.points > 0 ? `+${result.points}` : `${result.points}`;
   const newRating = rating;
   const rank = rankFromRating(newRating);
+  const canRunBack = canStartRatedBattle(result.mode, battlesLeft);
   const resultMeta =
     result.mode === "bot"
       ? "unranked bot battle"
@@ -1082,9 +1083,9 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome }) {
       </section>
 
       <section className="cta-stack">
-        <button className="primary-button lime" type="button" onClick={onRematch}>
-          <Bolt size={28} />
-          Run it back
+        <button className="primary-button lime" type="button" onClick={canRunBack ? onRematch : onRewards}>
+          {canRunBack ? <Bolt size={28} /> : <Gift size={28} />}
+          {canRunBack ? "Run it back" : "Get more battles"}
         </button>
         <div className="split-actions">
           <button className="outline-button" type="button" onClick={onNew}>
@@ -2101,7 +2102,7 @@ export function App() {
   }
 
   function startMatchmaking() {
-    if (battlesLeft <= 0) {
+    if (!canStartRatedBattle("ranked", battlesLeft)) {
       setAppPath("rewards");
       setScreen("rewards");
       return;
@@ -2285,6 +2286,7 @@ export function App() {
       <ResultScreen
         result={result}
         rating={rating}
+        battlesLeft={battlesLeft}
         onRematch={() => {
           if (result.mode === "streamer") {
             setScreen("streamer");
@@ -2292,6 +2294,7 @@ export function App() {
           }
           startBattle(result.mode, botName);
         }}
+        onRewards={() => openScreen("rewards")}
         onNew={startMatchmaking}
         onHome={goHome}
       />
