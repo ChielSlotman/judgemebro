@@ -32,6 +32,9 @@ jobs:
       - name: Supabase schema check
         run: npm run test:supabase
 
+      - name: Supabase migration helper check
+        run: npm run test:supabase-migrate
+
       - name: Workflow contract check
         run: npm run test:workflows
 

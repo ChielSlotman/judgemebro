@@ -19,6 +19,8 @@
     "sync:vercel-env": "node scripts/sync-vercel-env.mjs",
     "github:publish": "node scripts/github-publish.mjs",
     "test:github-publish": "node scripts/github-publish.mjs --dry-run --remote https://github.com/example/judgemebro.git --connect-vercel",
+    "supabase:migrate": "node scripts/supabase-migrate.mjs",
+    "test:supabase-migrate": "node scripts/supabase-migrate.mjs --plan-only --project-ref example-project-ref",
     "setup:check": "node scripts/setup-check.mjs"
   },
   "dependencies": {

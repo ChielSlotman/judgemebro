@@ -33,9 +33,9 @@ supabase/migrations/20260606230000_initial_judgemebro_schema.sql
 After installing the CLI and linking a project, preview and push the checked-in migrations with:
 
 ```bash
-supabase link
-supabase db push --dry-run
-supabase db push
+set SUPABASE_DB_PASSWORD=...
+npm run supabase:migrate -- --project-ref <project-ref> --dry-run
+npm run supabase:migrate -- --project-ref <project-ref> --apply
 ```
 
 If the CLI is not available, apply the checked-in SQL files through the Supabase SQL editor in timestamp order.
@@ -75,6 +75,7 @@ Run:
 
 ```bash
 npm run test:supabase
+npm run test:supabase-migrate
 npm run setup:check
 npm run check:providers
 npm run launch:audit

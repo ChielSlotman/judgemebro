@@ -44,13 +44,11 @@ jobs:
         run: |
           npm ci
           npm run test:supabase
-
-      - name: Link Supabase project
-        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+          npm run test:supabase-migrate
 
       - name: Preview migration push
-        run: supabase db push --dry-run
+        run: npm run supabase:migrate -- --project-ref "$SUPABASE_PROJECT_REF" --dry-run
 
       - name: Apply migration push
         if: ${{ inputs.apply == 'true' }}
-        run: supabase db push
+        run: npm run supabase:migrate -- --project-ref "$SUPABASE_PROJECT_REF" --apply
