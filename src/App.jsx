@@ -29,13 +29,18 @@ import {
 } from "lucide-react";
 import { bots, categories, scenarios, viewerAnswers as seedViewerAnswers } from "./data.js";
 import {
+  createFriendBattleRoom,
   findOrCreateRankedMatch,
   getPlayerPresenceId,
   getRankedBattleRoom,
+  joinFriendBattleRoom,
+  markFriendBattleJudged,
   markRankedBattleJudged,
   recordBattleResult,
   recordViewerSubmission,
+  submitFriendBattleAnswer,
   submitRankedBattleAnswer,
+  subscribeToFriendRoom,
   subscribeToRankedTicket,
 } from "./lib/gameRepository.js";
 import { requestJudgeVerdict } from "./lib/judgeClient.js";
@@ -479,7 +484,7 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
   );
 }
 
-function FriendBattleScreen({ category, joined, roomCode, onHome, onStart, onBot }) {
+function FriendBattleScreen({ category, joined, roomCode, status, onHome, onStart, onBot }) {
   const [copied, setCopied] = useState(false);
   const link = friendBattleLink(roomCode);
 
@@ -496,7 +501,7 @@ function FriendBattleScreen({ category, joined, roomCode, onHome, onStart, onBot
       <section className="room-hero">
         <span className="section-label">Friend battle</span>
         <h1>Room {roomCode}</h1>
-        <p>Send the link. Same prompt, 30s answers, AI verdict.</p>
+        <p>{status}</p>
       </section>
       <section className="link-box">
         <LinkIcon size={24} />
@@ -721,6 +726,11 @@ export function App() {
   const [rating, setRating] = useState(1128);
   const [result, setResult] = useState(null);
   const [friendJoined, setFriendJoined] = useState(initialInvite?.screen === "friend");
+  const [friendPersistence, setFriendPersistence] = useState(initialInvite?.screen === "friend" ? "checking" : "fallback");
+  const [friendRole, setFriendRole] = useState(initialInvite?.screen === "friend" ? "guest" : "host");
+  const [friendRoom, setFriendRoom] = useState(null);
+  const [friendPresenceId, setFriendPresenceId] = useState(null);
+  const [friendStatus, setFriendStatus] = useState("Send the link. Same prompt, 30s answers, AI verdict.");
   const [battleMode, setBattleMode] = useState(initialInvite?.screen === "friend" ? "friend" : "ranked");
   const [botName, setBotName] = useState(null);
   const [matchmakingStatus, setMatchmakingStatus] = useState("Opening real-player queue...");
@@ -809,10 +819,87 @@ export function App() {
   }, [screen, timer]);
 
   useEffect(() => {
-    if (screen !== "friend") return undefined;
+    if (screen !== "friend" || friendPersistence !== "fallback") return undefined;
     const timeout = window.setTimeout(() => setFriendJoined(true), 1800);
     return () => window.clearTimeout(timeout);
-  }, [screen]);
+  }, [screen, friendPersistence]);
+
+  useEffect(() => {
+    if (screen !== "friend" || friendPersistence !== "checking") return undefined;
+
+    let cancelled = false;
+    const scenario = getScenario(selectedCategory.id);
+    const action =
+      friendRole === "host"
+        ? createFriendBattleRoom({
+            roomCode: friendRoomCode,
+            category: selectedCategory,
+            prompt: scenario.prompt,
+            hostName: "You",
+          })
+        : joinFriendBattleRoom({ roomCode: friendRoomCode, guestName: "Friend" });
+
+    action
+      .then((result) => {
+        if (cancelled) return;
+
+        if (result.skipped) {
+          setFriendPersistence("fallback");
+          setFriendStatus("Send the link. Same prompt, 30s answers, AI verdict.");
+          return;
+        }
+
+        if (result.missing) {
+          setFriendPersistence("fallback");
+          setFriendStatus("Room not found in Supabase yet. Showing prototype room.");
+          return;
+        }
+
+        if (result.error) {
+          setFriendPersistence("fallback");
+          setFriendStatus("Friend room sync had an issue. Showing prototype room.");
+          return;
+        }
+
+        setFriendPersistence("real");
+        setFriendRoom(result.room);
+        setFriendPresenceId(result.playerPresenceId);
+        setFriendJoined(Boolean(result.room?.guest_presence_id));
+        setFriendStatus(
+          result.room?.guest_presence_id
+            ? "Friend joined. Same prompt, 30s answers, AI verdict."
+            : "Supabase room live. Send the link and wait for your friend.",
+        );
+      })
+      .catch((error) => {
+        console.warn("Friend room sync failed", error);
+        if (!cancelled) {
+          setFriendPersistence("fallback");
+          setFriendStatus("Friend room sync had an issue. Showing prototype room.");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [screen, friendPersistence, friendRole, friendRoomCode, selectedCategory]);
+
+  useEffect(() => {
+    if (screen !== "friend" || friendPersistence !== "real") return undefined;
+
+    const subscription = subscribeToFriendRoom(friendRoomCode, (payload) => {
+      const room = payload.new;
+      setFriendRoom(room);
+      setFriendJoined(Boolean(room?.guest_presence_id));
+      setFriendStatus(
+        room?.guest_presence_id
+          ? "Friend joined. Same prompt, 30s answers, AI verdict."
+          : "Supabase room live. Send the link and wait for your friend.",
+      );
+    });
+
+    return () => subscription.unsubscribe();
+  }, [screen, friendPersistence, friendRoomCode]);
 
   const rankedBots = useMemo(() => bots, []);
 
@@ -823,6 +910,10 @@ export function App() {
     setTimer(24);
     setMatchElapsed(0);
     setFriendJoined(false);
+    setFriendPersistence("fallback");
+    setFriendRoom(null);
+    setFriendPresenceId(null);
+    setFriendStatus("Send the link. Same prompt, 30s answers, AI verdict.");
     setRankedRoom(null);
     setRankedPresenceId(null);
     isJudgingRef.current = false;
@@ -851,6 +942,15 @@ export function App() {
     if (rankedRoom) {
       submitRankedBattleAnswer({ room: rankedRoom, answer }).catch((error) => {
         console.warn("Ranked answer submit failed", error);
+      });
+    }
+    if (battleMode === "friend") {
+      submitFriendBattleAnswer({
+        roomCode: friendRoomCode,
+        answer,
+        playerName: "You",
+      }).catch((error) => {
+        console.warn("Friend answer submit failed", error);
       });
     }
     setScreen("waiting");
@@ -887,6 +987,20 @@ export function App() {
         console.warn("Ranked verdict persistence failed", error);
       });
     }
+    if (battleMode === "friend" && friendRoom) {
+      const localPresenceId = friendPresenceId ?? getPlayerPresenceId();
+      const opponentPresenceId =
+        friendRoom.host_presence_id === localPresenceId ? friendRoom.guest_presence_id : friendRoom.host_presence_id;
+      const winnerPresenceId = nextResult.youWin ? localPresenceId : opponentPresenceId;
+      markFriendBattleJudged({
+        roomCode: friendRoomCode,
+        winnerPresenceId,
+        reason: nextResult.reason,
+        pointDelta: nextResult.points,
+      }).catch((error) => {
+        console.warn("Friend verdict persistence failed", error);
+      });
+    }
     setRating((current) => current + nextResult.points);
     isJudgingRef.current = false;
     setScreen("result");
@@ -896,6 +1010,11 @@ export function App() {
     updatePath(friendBattlePath(DEFAULT_FRIEND_ROOM));
     setFriendRoomCode(DEFAULT_FRIEND_ROOM);
     setFriendJoined(false);
+    setFriendPersistence("checking");
+    setFriendRole("host");
+    setFriendRoom(null);
+    setFriendPresenceId(getPlayerPresenceId());
+    setFriendStatus("Creating Supabase friend room...");
     setBattleMode("friend");
     setScreen("friend");
   }
@@ -978,6 +1097,7 @@ export function App() {
         category={selectedCategory}
         joined={friendJoined}
         roomCode={friendRoomCode}
+        status={friendStatus}
         onHome={goHome}
         onStart={() => startBattle("friend")}
         onBot={() => startBattle("bot", rankedBots[1].name)}

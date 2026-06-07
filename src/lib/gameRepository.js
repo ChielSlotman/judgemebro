@@ -80,6 +80,137 @@ export async function recordViewerSubmission({ roomCode, displayName, answer }) 
   return { ok: true };
 }
 
+export async function createFriendBattleRoom({ roomCode, category, prompt, hostName = "You" }) {
+  if (!hasSupabaseConfig || !supabase) return { skipped: true };
+
+  const playerPresenceId = presenceId();
+  const { data, error } = await supabase
+    .from("friend_battle_rooms")
+    .insert({
+      room_code: roomCode,
+      category_id: category.id,
+      prompt,
+      host_presence_id: playerPresenceId,
+      host_name: hostName,
+      status: "waiting",
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.warn("Supabase friend room create failed", error);
+    return { error };
+  }
+
+  return { room: data, playerPresenceId };
+}
+
+export async function joinFriendBattleRoom({ roomCode, guestName = "Friend" }) {
+  if (!hasSupabaseConfig || !supabase) return { skipped: true };
+
+  const playerPresenceId = presenceId();
+  const { data: existing, error: lookupError } = await supabase
+    .from("friend_battle_rooms")
+    .select("*")
+    .eq("room_code", roomCode)
+    .maybeSingle();
+
+  if (lookupError) {
+    console.warn("Supabase friend room lookup failed", lookupError);
+    return { error: lookupError };
+  }
+
+  if (!existing) return { missing: true, playerPresenceId };
+
+  if (existing.host_presence_id === playerPresenceId || existing.guest_presence_id === playerPresenceId) {
+    return { room: existing, playerPresenceId };
+  }
+
+  const { data, error } = await supabase
+    .from("friend_battle_rooms")
+    .update({
+      guest_presence_id: playerPresenceId,
+      guest_name: guestName,
+      status: "active",
+    })
+    .eq("room_code", roomCode)
+    .select()
+    .single();
+
+  if (error) {
+    console.warn("Supabase friend room join failed", error);
+    return { error };
+  }
+
+  return { room: data, playerPresenceId };
+}
+
+export async function submitFriendBattleAnswer({ roomCode, answer, playerName = "You" }) {
+  if (!hasSupabaseConfig || !supabase || !roomCode) return { skipped: true };
+
+  const playerPresenceId = presenceId();
+  const { error: answerError } = await supabase.from("friend_battle_answers").insert({
+    room_code: roomCode,
+    player_presence_id: playerPresenceId,
+    player_name: playerName,
+    answer,
+  });
+
+  if (answerError) {
+    console.warn("Supabase friend answer insert failed", answerError);
+    return { error: answerError };
+  }
+
+  const { data: room, error: roomLookupError } = await supabase
+    .from("friend_battle_rooms")
+    .select("*")
+    .eq("room_code", roomCode)
+    .single();
+
+  if (roomLookupError) {
+    console.warn("Supabase friend room submit lookup failed", roomLookupError);
+    return { error: roomLookupError };
+  }
+
+  const isHost = room.host_presence_id === playerPresenceId;
+  const { error: roomUpdateError } = await supabase
+    .from("friend_battle_rooms")
+    .update({
+      host_submitted: isHost ? true : room.host_submitted,
+      guest_submitted: isHost ? room.guest_submitted : true,
+      status: "active",
+    })
+    .eq("room_code", roomCode);
+
+  if (roomUpdateError) {
+    console.warn("Supabase friend room submit update failed", roomUpdateError);
+    return { error: roomUpdateError };
+  }
+
+  return { ok: true };
+}
+
+export async function markFriendBattleJudged({ roomCode, winnerPresenceId, reason, pointDelta = 18 }) {
+  if (!hasSupabaseConfig || !supabase || !roomCode) return { skipped: true };
+
+  const { error } = await supabase
+    .from("friend_battle_rooms")
+    .update({
+      status: "judged",
+      ai_winner_presence_id: winnerPresenceId,
+      ai_reason: reason,
+      point_delta: pointDelta,
+    })
+    .eq("room_code", roomCode);
+
+  if (error) {
+    console.warn("Supabase friend verdict update failed", error);
+    return { error };
+  }
+
+  return { ok: true };
+}
+
 export async function findOrCreateRankedMatch({ category, prompt, playerName = "You" }) {
   if (!hasSupabaseConfig || !supabase) return { skipped: true };
 

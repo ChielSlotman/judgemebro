@@ -1,7 +1,7 @@
 # Supabase Setup
 
-This prototype is wired to keep working without Supabase credentials. When `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are present, the app can persist battle results and streamer viewer submissions.
-It also attempts a Supabase-backed ranked matchmaking queue before falling back to the local prototype opponent.
+This prototype is wired to keep working without Supabase credentials. When `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are present, the app can persist battle results, friend battle links, and streamer viewer submissions.
+It also attempts Supabase-backed ranked matchmaking and friend-room sync before falling back to the local prototype opponent.
 
 ## Environment
 
@@ -68,6 +68,7 @@ supabase/migrations/20260607002000_enable_realtime_game_tables.sql
 Realtime-enabled tables:
 
 - `friend_battle_rooms`
+- `friend_battle_answers`
 - `ranked_matchmaking_tickets`
 - `ranked_battle_rooms`
 - `ranked_battle_answers`
@@ -82,10 +83,14 @@ The client helper functions live in `src/lib/gameRepository.js`:
 - `markRankedBattleJudged({ roomId, winnerPresenceId, reason, pointDelta })`
 - `subscribeToRankedTicket(ticketId, onChange)`
 - `subscribeToRankedBattle(roomId, onChange)`
+- `createFriendBattleRoom({ roomCode, category, prompt, hostName })`
+- `joinFriendBattleRoom({ roomCode, guestName })`
+- `submitFriendBattleAnswer({ roomCode, answer, playerName })`
+- `markFriendBattleJudged({ roomCode, winnerPresenceId, reason, pointDelta })`
 - `subscribeToStreamerAnswers(roomCode, onChange)`
 - `subscribeToFriendRoom(roomCode, onChange)`
 
-Ranked answer rows are only selectable after the battle room status is `judged`, which keeps answers hidden during the timed response phase. The current frontend still preserves the no-credentials prototype fallback, so local demos and smoke tests work before Supabase is connected.
+Ranked and friend answer rows are only selectable after the battle room status is `judged`, which keeps answers hidden during the timed response phase. The current frontend still preserves the no-credentials prototype fallback, so local demos and smoke tests work before Supabase is connected.
 
 RLS still applies to Realtime visibility. Streamer answer subscriptions are intended for authenticated streamers who own the room; viewer submissions can remain cheap inserts and do not trigger AI judging unless selected.
 
@@ -118,6 +123,7 @@ Then run the manual `Supabase Migrations` workflow. Keep `apply` as `false` for 
 - `profiles`
 - `category_ratings`
 - `battle_results`
+- `friend_battle_answers`
 - `ranked_matchmaking_tickets`
 - `ranked_battle_rooms`
 - `ranked_battle_answers`
