@@ -42,6 +42,8 @@ const iconMap = {
 };
 
 const MAX_CHARS = 280;
+const DEFAULT_FRIEND_ROOM = "V7P2";
+const DEFAULT_STREAM_ROOM = "BRO9";
 
 function clampAnswer(value) {
   return value.slice(0, MAX_CHARS);
@@ -49,6 +51,47 @@ function clampAnswer(value) {
 
 function getScenario(categoryId) {
   return scenarios[categoryId] ?? scenarios.social;
+}
+
+function inviteBaseUrl() {
+  if (typeof window === "undefined") return "https://judgemebro.com";
+  return window.location.origin;
+}
+
+function friendBattlePath(roomCode) {
+  return `/battle/${roomCode}`;
+}
+
+function streamerViewerPath(roomCode) {
+  return `/stream/${roomCode}`;
+}
+
+function friendBattleLink(roomCode) {
+  return `${inviteBaseUrl()}${friendBattlePath(roomCode)}`;
+}
+
+function streamerViewerLink(roomCode) {
+  return `${inviteBaseUrl()}${streamerViewerPath(roomCode)}`;
+}
+
+function parseInvitePath(pathname) {
+  const friendMatch = pathname.match(/^\/battle\/([^/]+)\/?$/);
+  if (friendMatch) return { screen: "friend", roomCode: friendMatch[1].toUpperCase() };
+
+  const streamMatch = pathname.match(/^\/stream\/([^/]+)\/?$/);
+  if (streamMatch) return { screen: "viewer", roomCode: streamMatch[1].toUpperCase() };
+
+  return null;
+}
+
+function updatePath(path) {
+  if (typeof window === "undefined") return;
+  window.history.pushState({}, "", path);
+}
+
+function resetPath() {
+  if (typeof window === "undefined") return;
+  window.history.replaceState({}, "", "/");
 }
 
 function BrandHeader({ onHome, onProfile, onLeave, compact = false }) {
@@ -426,9 +469,9 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
   );
 }
 
-function FriendBattleScreen({ category, joined, onHome, onStart, onBot }) {
+function FriendBattleScreen({ category, joined, roomCode, onHome, onStart, onBot }) {
   const [copied, setCopied] = useState(false);
-  const link = "https://judgemebro.com/battle/V7P2";
+  const link = friendBattleLink(roomCode);
 
   function copyLink() {
     setCopied(true);
@@ -442,7 +485,7 @@ function FriendBattleScreen({ category, joined, onHome, onStart, onBot }) {
       <BrandHeader onHome={onHome} onLeave={onHome} compact />
       <section className="room-hero">
         <span className="section-label">Friend battle</span>
-        <h1>Room V7P2</h1>
+        <h1>Room {roomCode}</h1>
         <p>Send the link. Same prompt, 30s answers, AI verdict.</p>
       </section>
       <section className="link-box">
@@ -518,12 +561,22 @@ function ProfileScreen({ onHome, onFind, onFriend, onStreamer }) {
   );
 }
 
-function StreamerScreen({ onHome, onViewer, onOfficial }) {
+function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
   const [streamerAnswer, setStreamerAnswer] = useState(
     "Fair, but sparks are overrated. I prefer tension that actually builds.",
   );
   const [answers, setAnswers] = useState(seedViewerAnswers);
   const [selected, setSelected] = useState(seedViewerAnswers[0]);
+  const [copied, setCopied] = useState(false);
+
+  function copyViewerLink() {
+    const link = streamerViewerLink(roomCode);
+    setCopied(true);
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(link).catch(() => {});
+    }
+    onViewer();
+  }
 
   function hideAnswer(id) {
     setAnswers((current) => current.filter((answer) => answer.id !== id));
@@ -539,12 +592,12 @@ function StreamerScreen({ onHome, onViewer, onOfficial }) {
         <div>
           <span className="live-pill">Live room</span>
           <h1>Chat gets judged</h1>
-          <p>Room BRO9. 241 viewers. Viewer answers are free until selected.</p>
+          <p>Room {roomCode}. 241 viewers. Viewer answers are free until selected.</p>
         </div>
         <div className="stream-actions">
-          <button className="outline-button" type="button" onClick={onViewer}>
+          <button className="outline-button" type="button" onClick={copyViewerLink}>
             <Copy size={20} />
-            Viewer link
+            {copied ? "Copied link" : "Viewer link"}
           </button>
           <button className="primary-button lime small" type="button">
             Start round
@@ -589,7 +642,7 @@ function StreamerScreen({ onHome, onViewer, onOfficial }) {
   );
 }
 
-function ViewerScreen({ onHome }) {
+function ViewerScreen({ roomCode, onHome }) {
   const [name, setName] = useState("Viewer 27");
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -597,7 +650,7 @@ function ViewerScreen({ onHome }) {
   function submitViewerAnswer() {
     setSubmitted(true);
     recordViewerSubmission({
-      roomCode: "BRO9",
+      roomCode,
       displayName: name,
       answer,
     }).catch((error) => {
@@ -611,7 +664,7 @@ function ViewerScreen({ onHome }) {
       <section className="room-hero">
         <span className="live-pill">Live</span>
         <h1>Kai's room</h1>
-        <p>Room BRO9. 241 viewers.</p>
+        <p>Room {roomCode}. 241 viewers.</p>
       </section>
       <section className="scenario-card">
         <span className="section-label">Dating</span>
@@ -643,15 +696,22 @@ function ViewerScreen({ onHome }) {
 }
 
 export function App() {
-  const [screen, setScreen] = useState("home");
+  const initialInvite = useMemo(() => parseInvitePath(window.location.pathname), []);
+  const [screen, setScreen] = useState(initialInvite?.screen ?? "home");
   const [selectedCategory, setSelectedCategory] = useState(categories[5]);
+  const [friendRoomCode, setFriendRoomCode] = useState(
+    initialInvite?.screen === "friend" ? initialInvite.roomCode : DEFAULT_FRIEND_ROOM,
+  );
+  const [streamRoomCode, setStreamRoomCode] = useState(
+    initialInvite?.screen === "viewer" ? initialInvite.roomCode : DEFAULT_STREAM_ROOM,
+  );
   const [matchElapsed, setMatchElapsed] = useState(0);
   const [timer, setTimer] = useState(24);
   const [answer, setAnswer] = useState("");
   const [rating, setRating] = useState(1128);
   const [result, setResult] = useState(null);
-  const [friendJoined, setFriendJoined] = useState(false);
-  const [battleMode, setBattleMode] = useState("ranked");
+  const [friendJoined, setFriendJoined] = useState(initialInvite?.screen === "friend");
+  const [battleMode, setBattleMode] = useState(initialInvite?.screen === "friend" ? "friend" : "ranked");
   const [botName, setBotName] = useState(null);
   const isJudgingRef = useRef(false);
 
@@ -682,6 +742,7 @@ export function App() {
   const rankedBots = useMemo(() => bots, []);
 
   function goHome() {
+    resetPath();
     setScreen("home");
     setAnswer("");
     setTimer(24);
@@ -733,6 +794,8 @@ export function App() {
   }
 
   function startFriend() {
+    updatePath(friendBattlePath(DEFAULT_FRIEND_ROOM));
+    setFriendRoomCode(DEFAULT_FRIEND_ROOM);
     setFriendJoined(false);
     setBattleMode("friend");
     setScreen("friend");
@@ -814,6 +877,7 @@ export function App() {
       <FriendBattleScreen
         category={selectedCategory}
         joined={friendJoined}
+        roomCode={friendRoomCode}
         onHome={goHome}
         onStart={() => startBattle("friend")}
         onBot={() => startBattle("bot", rankedBots[1].name)}
@@ -835,15 +899,27 @@ export function App() {
   if (screen === "streamer") {
     return (
       <StreamerScreen
+        roomCode={streamRoomCode}
         onHome={goHome}
-        onViewer={() => setScreen("viewer")}
+        onViewer={() => {
+          updatePath(streamerViewerPath(streamRoomCode));
+          setScreen("viewer");
+        }}
         onOfficial={officialStreamerBattle}
       />
     );
   }
 
   if (screen === "viewer") {
-    return <ViewerScreen onHome={() => setScreen("streamer")} />;
+    return (
+      <ViewerScreen
+        roomCode={streamRoomCode}
+        onHome={() => {
+          resetPath();
+          setScreen("streamer");
+        }}
+      />
+    );
   }
 
   return (
@@ -852,7 +928,11 @@ export function App() {
       setSelectedCategory={setSelectedCategory}
       onFind={startMatchmaking}
       onFriend={startFriend}
-      onStreamer={() => setScreen("streamer")}
+      onStreamer={() => {
+        resetPath();
+        setStreamRoomCode(DEFAULT_STREAM_ROOM);
+        setScreen("streamer");
+      }}
       onProfile={() => setScreen("profile")}
     />
   );

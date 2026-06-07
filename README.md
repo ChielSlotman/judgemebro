@@ -15,9 +15,9 @@ Live Vercel deployment: https://judgemebro.vercel.app
 ## Prototype Loops
 
 - Ranked 1v1 battle: choose category, find opponent, answer under the timer, get judged, gain or lose points.
-- Friend battle: create a private room link, wait for a friend, start the same-prompt duel.
+- Friend battle: create a private room link like `/battle/V7P2`, wait for a friend, start the same-prompt duel.
 - Bot fallback: play a bot if matchmaking takes too long.
-- Streamer mode: create a live room, collect viewer answers, show selected answers, optionally start an official judged battle.
+- Streamer mode: create a live room, share a viewer link like `/stream/BRO9`, collect viewer answers, show selected answers, optionally start an official judged battle.
 
 ## Run Locally
 

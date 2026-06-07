@@ -118,6 +118,12 @@ async function run() {
     await clickButton(page, "Start battle");
     await assertVisible(page, "Submit to judge", "friend battle");
 
+    await page.goto(`${baseUrl}/battle/V7P2`, { waitUntil: "load" });
+    await assertVisible(page, "Room V7P2", "friend deep link room");
+    await assertVisible(page, "Maya joined", "friend deep link joined");
+    await clickButton(page, "Start battle");
+    await assertVisible(page, "Submit to judge", "friend deep link battle");
+
     await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "Find opponent");
     await page.waitForTimeout(5_300);
@@ -134,6 +140,10 @@ async function run() {
     );
     await clickButton(page, "Submit to streamer");
     await assertVisible(page, "Answer submitted", "viewer submitted");
+
+    await page.goto(`${baseUrl}/stream/BRO9`, { waitUntil: "load" });
+    await assertVisible(page, "Kai's room", "viewer deep link room");
+    await assertVisible(page, "Room BRO9", "viewer deep link code");
 
     await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "I am a streamer");
