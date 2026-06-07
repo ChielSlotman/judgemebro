@@ -603,6 +603,70 @@ button:disabled {
   line-height: 1.35;
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 5px;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.auth-tabs button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.auth-tabs button.active {
+  background: var(--lime);
+  color: #071006;
+}
+
+.auth-form {
+  display: grid;
+  gap: 11px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 50px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: 0;
+  background: rgba(0, 0, 0, 0.24);
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.auth-form input::placeholder {
+  color: rgba(255, 255, 255, 0.34);
+}
+
+.outline-button:disabled,
+.primary-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .legal-strip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -655,6 +719,11 @@ button:disabled {
 
 .reward-list article.next {
   border-color: rgba(33, 227, 213, 0.5);
+}
+
+.reward-list article.ready {
+  border-color: rgba(255, 209, 102, 0.55);
+  box-shadow: 0 0 30px rgba(255, 209, 102, 0.08);
 }
 
 .reward-list strong {
@@ -1814,6 +1883,30 @@ button:disabled {
 
   .category-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 430px) {
+  .brand-header.compact {
+    gap: 8px;
+  }
+
+  .brand-header.compact .brand-lockup {
+    max-width: calc(100% - 104px);
+  }
+
+  .brand-header.compact .brand-lockup span {
+    font-size: clamp(24px, 7.4vw, 31px);
+  }
+
+  .brand-header.compact .brand-lockup small {
+    font-size: clamp(13px, 3.7vw, 17px);
+  }
+
+  .brand-header.compact .ghost-button {
+    min-height: 44px;
+    padding: 0 11px;
+    font-size: 14px;
   }
 }
 

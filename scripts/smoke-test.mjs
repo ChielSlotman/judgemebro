@@ -123,6 +123,20 @@ async function run() {
     await assertVisible(page, "judgemebro", "brand");
     await assertVisible(page, "Find opponent", "primary CTA");
 
+    await clickButton(page, "3-day streak Tap to claim your extra battle.");
+    await assertVisible(page, "Rewards", "rewards screen");
+    await clickButton(page, "Claim extra battle");
+    await assertVisible(page, "Reward claimed", "claimed streak reward");
+
+    await page.goto(baseUrl, { waitUntil: "load" });
+    await clickButton(page, "Open profile");
+    await assertVisible(page, "Guest bro", "guest profile");
+    await clickButton(page, "Account");
+    await assertVisible(page, "Log in", "account login screen");
+    await clickButton(page, "Use demo profile");
+    await assertVisible(page, "Demo profile active", "demo profile status");
+
+    await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "Find opponent");
     await page.waitForTimeout(5_300);
     if (await visibleText(page, "Start quick battle")) {

@@ -65,6 +65,7 @@ const iconMap = {
 const MAX_CHARS = 280;
 const DEFAULT_FRIEND_ROOM = "V7P2";
 const DEFAULT_STREAM_ROOM = "BRO9";
+const STORAGE_PREFIX = "judgemebro:";
 const VOICE_SUPPORT =
   typeof window !== "undefined" && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 
@@ -131,6 +132,30 @@ function updatePath(path) {
 function resetPath() {
   if (typeof window === "undefined") return;
   window.history.replaceState({}, "", "/");
+}
+
+function readStoredJson(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const stored = window.localStorage.getItem(`${STORAGE_PREFIX}${key}`);
+    return stored ? JSON.parse(stored) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function readStoredNumber(key, fallback) {
+  const stored = readStoredJson(key, fallback);
+  return Number.isFinite(stored) ? stored : fallback;
+}
+
+function writeStoredJson(key, value) {
+  if (typeof window === "undefined") return;
+  if (value === null || value === undefined) {
+    window.localStorage.removeItem(`${STORAGE_PREFIX}${key}`);
+    return;
+  }
+  window.localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(value));
 }
 
 function pickCommentatorVoice() {
@@ -376,7 +401,7 @@ function CategoryTile({ category, selected, onSelect }) {
   );
 }
 
-function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, onStreamer, onProfile, onRewards }) {
+function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, onStreamer, onProfile, onRewards, rewardClaimed }) {
   return (
     <main className="screen home-screen">
       <BrandHeader onHome={() => {}} onProfile={onProfile} />
@@ -455,7 +480,7 @@ function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, o
         <Gift size={34} />
         <span>
           <strong>3-day streak</strong>
-          Tap to claim and preview rewards.
+          {rewardClaimed ? "Reward claimed. Keep playing for the next drop." : "Tap to claim your extra battle."}
         </span>
         <ChevronRight size={26} />
       </button>
@@ -463,14 +488,29 @@ function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, o
   );
 }
 
-function AccountScreen({ user, authStatus, onGoogle, onDemo, onHome, onProfile, onLegal }) {
+function AccountScreen({ user, authStatus, onGoogle, onEmailAuth, onDemo, onSignOut, onHome, onProfile, onLegal }) {
+  const [authMode, setAuthMode] = useState("login");
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState(user?.email || "");
+  const [password, setPassword] = useState("");
+
+  function submitEmailAuth(event) {
+    event.preventDefault();
+    onEmailAuth({
+      mode: authMode,
+      name: displayName,
+      email,
+      password,
+    });
+  }
+
   return (
     <main className="screen account-screen">
       <BrandHeader onHome={onHome} onLeave={onHome} compact />
       <section className="auth-card">
         <span className="section-label">Account</span>
-        <h1>{user ? "You are in" : "Sign in to keep score"}</h1>
-        <p>{user ? "Your rating, streak, and category stats are tied to this profile." : "Use Google when Supabase Auth is connected, or use demo mode for prototype testing."}</p>
+        <h1>{user ? "You are in" : authMode === "login" ? "Log in" : "Register"}</h1>
+        <p>{user ? "Your rating, streak, and category stats are tied to this profile." : "Create an account, use Google, or jump in with a demo profile while testing."}</p>
         <div className="auth-user">
           <img src={user?.avatarUrl || "/assets/avatar-you.png"} alt="" />
           <div>
@@ -482,9 +522,57 @@ function AccountScreen({ user, authStatus, onGoogle, onDemo, onHome, onProfile, 
           <BadgeCheck size={24} />
           Continue with Google
         </button>
-        <button className="outline-button" type="button" onClick={onDemo}>
-          Use demo profile
-        </button>
+        <div className="auth-tabs" role="tablist" aria-label="Account mode">
+          <button className={authMode === "login" ? "active" : ""} type="button" onClick={() => setAuthMode("login")}>
+            Login
+          </button>
+          <button className={authMode === "register" ? "active" : ""} type="button" onClick={() => setAuthMode("register")}>
+            Register
+          </button>
+        </div>
+        <form className="auth-form" onSubmit={submitEmailAuth}>
+          {authMode === "register" ? (
+            <label>
+              Display name
+              <input
+                value={displayName}
+                autoComplete="nickname"
+                placeholder="Decision demon"
+                onChange={(event) => setDisplayName(event.target.value)}
+              />
+            </label>
+          ) : null}
+          <label>
+            Email
+            <input
+              value={email}
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+              onChange={(event) => setEmail(event.target.value)}
+            />
+          </label>
+          <label>
+            Password
+            <input
+              value={password}
+              type="password"
+              autoComplete={authMode === "login" ? "current-password" : "new-password"}
+              placeholder="8+ characters"
+              minLength={6}
+              required
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          <button className="outline-button" type="submit">
+            {authMode === "login" ? "Log in" : "Create account"}
+          </button>
+        </form>
+        <div className="split-actions">
+          <button className="outline-button" type="button" onClick={onDemo}>Use demo profile</button>
+          <button className="outline-button coral" type="button" disabled={!user} onClick={onSignOut}>Sign out</button>
+        </div>
         <p className="auth-status">{authStatus}</p>
       </section>
       <section className="legal-strip">
@@ -496,9 +584,9 @@ function AccountScreen({ user, authStatus, onGoogle, onDemo, onHome, onProfile, 
   );
 }
 
-function RewardScreen({ streak, battlesLeft, onHome, onFind, onProfile }) {
+function RewardScreen({ streak, battlesLeft, rewardClaimed, onClaim, onHome, onFind, onProfile }) {
   const rewards = [
-    { title: "3-day streak", status: "Claimed", detail: "One extra ranked battle is active today." },
+    { title: "3-day streak", status: rewardClaimed ? "Claimed" : "Ready", detail: "Claim one extra ranked battle for today." },
     { title: "5-day streak", status: "Next", detail: "Unlock a fresh prompt pack preview." },
     { title: "7-day streak", status: "Locked", detail: "Double points token for one battle." },
   ];
@@ -524,6 +612,9 @@ function RewardScreen({ streak, battlesLeft, onHome, onFind, onProfile }) {
         ))}
       </section>
       <section className="cta-stack">
+        <button className="primary-button lime" type="button" disabled={rewardClaimed} onClick={onClaim}>
+          {rewardClaimed ? "Reward claimed" : "Claim extra battle"}
+        </button>
         <button className="primary-button lime" type="button" onClick={onFind}>Play for streak</button>
         <button className="outline-button" type="button" onClick={onProfile}>Profile stats</button>
       </section>
@@ -1192,10 +1283,11 @@ export function App() {
   const [matchElapsed, setMatchElapsed] = useState(0);
   const [timer, setTimer] = useState(24);
   const [answer, setAnswer] = useState("");
-  const [rating, setRating] = useState(1128);
-  const [streak, setStreak] = useState(3);
-  const [battlesLeft, setBattlesLeft] = useState(4);
-  const [user, setUser] = useState(null);
+  const [rating, setRating] = useState(() => readStoredNumber("rating", 1128));
+  const [streak, setStreak] = useState(() => readStoredNumber("streak", 3));
+  const [battlesLeft, setBattlesLeft] = useState(() => readStoredNumber("battles-left", 4));
+  const [rewardClaimed, setRewardClaimed] = useState(() => readStoredJson("reward-claimed", false));
+  const [user, setUser] = useState(() => readStoredJson("user", null));
   const [authStatus, setAuthStatus] = useState("Google sign-in is ready when Supabase Auth is configured.");
   const [legalType, setLegalType] = useState("terms");
   const [result, setResult] = useState(null);
@@ -1217,6 +1309,26 @@ export function App() {
   const currentScenario = getScenario(selectedCategory.id, scenarioRound);
 
   useEffect(() => {
+    writeStoredJson("user", user);
+  }, [user]);
+
+  useEffect(() => {
+    writeStoredJson("rating", rating);
+  }, [rating]);
+
+  useEffect(() => {
+    writeStoredJson("streak", streak);
+  }, [streak]);
+
+  useEffect(() => {
+    writeStoredJson("battles-left", battlesLeft);
+  }, [battlesLeft]);
+
+  useEffect(() => {
+    writeStoredJson("reward-claimed", rewardClaimed);
+  }, [rewardClaimed]);
+
+  useEffect(() => {
     if (!supabase) return undefined;
     let cancelled = false;
 
@@ -1232,7 +1344,11 @@ export function App() {
     });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) return;
+      if (!session?.user) {
+        setUser(null);
+        setAuthStatus("Signed out.");
+        return;
+      }
       setUser({
         name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Player",
         email: session.user.email,
@@ -1243,7 +1359,7 @@ export function App() {
 
     return () => {
       cancelled = true;
-      listener.subscription.unsubscribe();
+      listener?.subscription?.unsubscribe();
     };
   }, []);
 
@@ -1443,6 +1559,12 @@ export function App() {
     setScenarioRound((current) => (current + 1) % getScenarioCount(categoryId));
   }
 
+  function claimStreakReward() {
+    if (rewardClaimed) return;
+    setRewardClaimed(true);
+    setBattlesLeft((current) => current + 1);
+  }
+
   async function signInWithGoogle() {
     if (!hasSupabaseConfig || !supabase) {
       setUser({ name: "Demo Player", email: "demo@judgemebro.com", avatarUrl: "/assets/avatar-you.png" });
@@ -1458,9 +1580,59 @@ export function App() {
     if (error) setAuthStatus(`Google sign-in failed: ${error.message}`);
   }
 
+  async function emailAuth({ mode, name, email, password }) {
+    const cleanEmail = email.trim();
+    const cleanName = name.trim();
+    if (!cleanEmail || !password) {
+      setAuthStatus("Enter an email and password first.");
+      return;
+    }
+
+    if (!hasSupabaseConfig || !supabase) {
+      setUser({
+        name: cleanName || cleanEmail.split("@")[0] || "Demo Player",
+        email: cleanEmail,
+        avatarUrl: "/assets/avatar-you.png",
+      });
+      setAuthStatus("Supabase Auth is not configured locally, so this account is saved as a demo profile.");
+      return;
+    }
+
+    setAuthStatus(mode === "register" ? "Creating account..." : "Logging in...");
+    const authCall =
+      mode === "register"
+        ? supabase.auth.signUp({
+            email: cleanEmail,
+            password,
+            options: { data: { full_name: cleanName || cleanEmail.split("@")[0] } },
+          })
+        : supabase.auth.signInWithPassword({ email: cleanEmail, password });
+
+    const { data, error } = await authCall;
+    if (error) {
+      setAuthStatus(`${mode === "register" ? "Registration" : "Login"} failed: ${error.message}`);
+      return;
+    }
+
+    if (data.user) {
+      setUser({
+        name: data.user.user_metadata?.full_name || cleanEmail.split("@")[0] || "Player",
+        email: data.user.email || cleanEmail,
+        avatarUrl: data.user.user_metadata?.avatar_url || "/assets/avatar-you.png",
+      });
+    }
+    setAuthStatus(mode === "register" ? "Account created. Check email if confirmation is required." : "Logged in.");
+  }
+
   function signInDemo() {
     setUser({ name: "Demo Player", email: "demo@judgemebro.com", avatarUrl: "/assets/avatar-you.png" });
     setAuthStatus("Demo profile active. Google can be connected in Supabase Auth.");
+  }
+
+  async function signOut() {
+    if (supabase) await supabase.auth.signOut().catch(() => {});
+    setUser(null);
+    setAuthStatus("Signed out.");
   }
 
   function startMatchmaking() {
@@ -1698,7 +1870,9 @@ export function App() {
         user={user}
         authStatus={authStatus}
         onGoogle={signInWithGoogle}
+        onEmailAuth={emailAuth}
         onDemo={signInDemo}
+        onSignOut={signOut}
         onHome={goHome}
         onProfile={() => setScreen("profile")}
         onLegal={openLegal}
@@ -1711,6 +1885,8 @@ export function App() {
       <RewardScreen
         streak={streak}
         battlesLeft={battlesLeft}
+        rewardClaimed={rewardClaimed}
+        onClaim={claimStreakReward}
         onHome={goHome}
         onFind={startMatchmaking}
         onProfile={() => setScreen("profile")}
@@ -1764,6 +1940,7 @@ export function App() {
       onStreamer={startStreamer}
       onProfile={() => setScreen("profile")}
       onRewards={() => setScreen("rewards")}
+      rewardClaimed={rewardClaimed}
     />
   );
 }
