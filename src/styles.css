@@ -1309,6 +1309,32 @@ button:disabled {
   line-height: 1.04;
 }
 
+.stream-category-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: -4px 0 20px;
+}
+
+.stream-category-row button {
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.stream-category-row button.active {
+  border-color: rgba(184, 255, 0, 0.58);
+  background: rgba(184, 255, 0, 0.15);
+  color: var(--lime);
+}
+
 .stream-main label,
 .viewer-form label {
   display: grid;

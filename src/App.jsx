@@ -91,6 +91,15 @@ function streamerViewerLink(roomCode) {
   return `${inviteBaseUrl()}${streamerViewerPath(roomCode)}`;
 }
 
+function createRoomCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  for (let index = 0; index < 6; index += 1) {
+    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
+  return code;
+}
+
 function parseInvitePath(pathname) {
   const friendMatch = pathname.match(/^\/battle\/([^/]+)\/?$/);
   if (friendMatch) return { screen: "friend", roomCode: friendMatch[1].toUpperCase() };
@@ -109,6 +118,47 @@ function updatePath(path) {
 function resetPath() {
   if (typeof window === "undefined") return;
   window.history.replaceState({}, "", "/");
+}
+
+function pickCommentatorVoice() {
+  if (typeof window === "undefined" || !window.speechSynthesis) return null;
+
+  const voices = window.speechSynthesis.getVoices();
+  const englishVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith("en"));
+  const maleVoiceHints = [
+    /\bdavid\b/i,
+    /\bdaniel\b/i,
+    /\balex\b/i,
+    /\bfred\b/i,
+    /\bmark\b/i,
+    /\bpaul\b/i,
+    /\bmale\b/i,
+  ];
+
+  const score = (voice) => {
+    const name = voice.name || "";
+    const hinted = maleVoiceHints.some((pattern) => pattern.test(name)) ? 20 : 0;
+    const englishUs = voice.lang.toLowerCase().startsWith("en-us") ? 2 : 0;
+    return hinted + englishUs + (voice.default ? 1 : 0);
+  };
+
+  return [...(englishVoices.length ? englishVoices : voices)].sort((a, b) => score(b) - score(a))[0] ?? null;
+}
+
+function speakVerdict(result) {
+  if (typeof window === "undefined" || !window.speechSynthesis || !result) return;
+
+  window.speechSynthesis.cancel();
+  const verdict = result.youWin ? "You win." : "You lose.";
+  const points = result.mode === "bot" ? "Unranked bot battle." : `${result.points > 0 ? "Plus" : "Minus"} ${Math.abs(result.points)} points.`;
+  const utterance = new SpeechSynthesisUtterance(`${verdict} ${points} ${result.reason}`);
+  const voice = pickCommentatorVoice();
+  if (voice) utterance.voice = voice;
+  utterance.lang = voice?.lang || "en-US";
+  utterance.rate = 0.96;
+  utterance.pitch = 0.72;
+  utterance.volume = 1;
+  window.speechSynthesis.speak(utterance);
 }
 
 function BrandHeader({ onHome, onProfile, onLeave, compact = false }) {
@@ -391,6 +441,7 @@ function BattleScreen({
       <section className="answer-box">
         <textarea
           value={answer}
+          maxLength={MAX_CHARS}
           onChange={(event) => setAnswer(clampAnswer(event.target.value))}
           placeholder="Type your answer..."
           aria-label="Your answer"
@@ -398,7 +449,7 @@ function BattleScreen({
         <span>{answer.length}/{MAX_CHARS}</span>
       </section>
 
-      <button className="primary-button judge" type="button" onClick={onSubmit}>
+      <button className="primary-button judge" type="button" disabled={answer.trim().length === 0} onClick={onSubmit}>
         <Gavel size={32} />
         Submit to judge
       </button>
@@ -434,6 +485,12 @@ function WaitingScreen({ timer, category, onForceResult }) {
 function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
   const delta = result.points > 0 ? `+${result.points}` : `${result.points}`;
   const newRating = rating;
+  const resultMeta =
+    result.mode === "bot"
+      ? "unranked bot battle"
+      : result.mode === "streamer"
+        ? "streamer battle"
+        : `new rating ${newRating} Gold`;
 
   return (
     <main className="screen result-screen">
@@ -444,7 +501,7 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
         <div className="point-burst">
           <img src="/assets/rank-gold.png" alt="" />
           <strong>{delta}</strong>
-          <span>{result.mode === "bot" ? "unranked bot battle" : `new rating ${newRating} Gold`}</span>
+          <span>{resultMeta}</span>
         </div>
       </section>
 
@@ -587,24 +644,23 @@ function normalizeViewerAnswer(answer) {
   };
 }
 
-function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
-  const [streamerAnswer, setStreamerAnswer] = useState(
-    "Fair, but sparks are overrated. I prefer tension that actually builds.",
-  );
+function StreamerScreen({ roomCode, category, setCategory, onHome, onViewer, onOfficial }) {
+  const [streamerAnswer, setStreamerAnswer] = useState(() => getScenario(category.id).winningAnswer);
   const [answers, setAnswers] = useState(seedViewerAnswers);
   const [selected, setSelected] = useState(seedViewerAnswers[0]);
   const [copied, setCopied] = useState(false);
   const [streamStatus, setStreamStatus] = useState("Viewer answers are free until selected.");
+  const [roundNumber, setRoundNumber] = useState(1);
+  const currentScenario = getScenario(category.id);
 
   useEffect(() => {
     let cancelled = false;
-    const currentPrompt = getScenario("dating").prompt;
 
     createStreamerRoom({
       roomCode,
       roomName: "Kai's room",
-      categoryId: "dating",
-      currentPrompt,
+      categoryId: category.id,
+      currentPrompt: currentScenario.prompt,
     })
       .then((result) => {
         if (cancelled) return;
@@ -626,7 +682,7 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
     return () => {
       cancelled = true;
     };
-  }, [roomCode]);
+  }, [roomCode, category.id, currentScenario.prompt]);
 
   useEffect(() => {
     const subscription = subscribeToStreamerAnswers(roomCode, (payload) => {
@@ -675,6 +731,17 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
     onOfficial(streamerAnswer, answer);
   }
 
+  function startNextRound() {
+    const currentIndex = categories.findIndex((item) => item.id === category.id);
+    const nextCategory = categories[(currentIndex + 1) % categories.length];
+    setCategory(nextCategory);
+    setRoundNumber((value) => value + 1);
+    setStreamerAnswer(getScenario(nextCategory.id).winningAnswer);
+    setSelected(seedViewerAnswers[0]);
+    setAnswers(seedViewerAnswers);
+    setStreamStatus("New round live. Viewer answers stay free until selected.");
+  }
+
   return (
     <main className="streamer-shell">
       <BrandHeader onHome={onHome} onLeave={onHome} compact />
@@ -689,7 +756,7 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
             <Copy size={20} />
             {copied ? "Copied link" : "Viewer link"}
           </button>
-          <button className="primary-button lime small" type="button">
+          <button className="primary-button lime small" type="button" onClick={startNextRound}>
             Start round
           </button>
         </div>
@@ -697,13 +764,33 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
       <section className="stream-grid">
         <div className="stream-main">
           <div className="stream-meta">
-            <span>Dating</span>
+            <span>{category.name}</span>
             <strong>18s</strong>
           </div>
-          <h2>{getScenario("dating").prompt}</h2>
+          <h2>{currentScenario.prompt}</h2>
+          <div className="stream-category-row" aria-label="Streamer category">
+            {categories.map((item) => (
+              <button
+                key={item.id}
+                className={item.id === category.id ? "active" : ""}
+                type="button"
+                onClick={() => {
+                  setCategory(item);
+                  setRoundNumber((value) => value + 1);
+                  setStreamerAnswer(getScenario(item.id).winningAnswer);
+                }}
+              >
+                {item.name}
+              </button>
+            ))}
+          </div>
           <label>
-            Streamer answer
-            <textarea value={streamerAnswer} onChange={(event) => setStreamerAnswer(clampAnswer(event.target.value))} />
+            Streamer answer - round {roundNumber}
+            <textarea
+              value={streamerAnswer}
+              maxLength={MAX_CHARS}
+              onChange={(event) => setStreamerAnswer(clampAnswer(event.target.value))}
+            />
           </label>
         </div>
         <aside className="viewer-panel">
@@ -732,10 +819,11 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
   );
 }
 
-function ViewerScreen({ roomCode, onHome }) {
+function ViewerScreen({ roomCode, category, onHome }) {
   const [name, setName] = useState("Viewer 27");
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const currentScenario = getScenario(category.id);
 
   function submitViewerAnswer() {
     setSubmitted(true);
@@ -757,8 +845,8 @@ function ViewerScreen({ roomCode, onHome }) {
         <p>Room {roomCode}. 241 viewers.</p>
       </section>
       <section className="scenario-card">
-        <span className="section-label">Dating</span>
-        <h1>{getScenario("dating").prompt}</h1>
+        <span className="section-label">{category.name}</span>
+        <h1>{currentScenario.prompt}</h1>
       </section>
       <section className="viewer-form">
         <label>
@@ -769,6 +857,7 @@ function ViewerScreen({ roomCode, onHome }) {
           Your answer
           <textarea
             value={answer}
+            maxLength={MAX_CHARS}
             disabled={submitted}
             onChange={(event) => setAnswer(clampAnswer(event.target.value))}
             placeholder="Submit something stream-worthy..."
@@ -812,6 +901,7 @@ export function App() {
   const [rankedRoom, setRankedRoom] = useState(null);
   const [rankedPresenceId, setRankedPresenceId] = useState(null);
   const isJudgingRef = useRef(false);
+  const narratedResultRef = useRef(null);
 
   const botReady = matchElapsed >= 5;
 
@@ -976,6 +1066,14 @@ export function App() {
     return () => subscription.unsubscribe();
   }, [screen, friendPersistence, friendRoomCode]);
 
+  useEffect(() => {
+    if (screen !== "result" || !result) return;
+    const resultKey = `${result.mode}:${result.category.id}:${result.yourAnswer}:${result.opponentAnswer}:${result.youWin}`;
+    if (narratedResultRef.current === resultKey) return;
+    narratedResultRef.current = resultKey;
+    window.setTimeout(() => speakVerdict(result), 180);
+  }, [screen, result]);
+
   const rankedBots = useMemo(() => bots, []);
 
   function goHome() {
@@ -1009,11 +1107,18 @@ export function App() {
     setBotName(nextBotName);
     setTimer(24);
     setAnswer("");
+    setResult(null);
+    narratedResultRef.current = null;
+    isJudgingRef.current = false;
     setScreen("battle");
   }
 
   function submitAnswer() {
     if (answer.trim().length === 0) return;
+    if (battleMode === "bot") {
+      finishRound();
+      return;
+    }
     if (rankedRoom) {
       submitRankedBattleAnswer({ room: rankedRoom, answer }).catch((error) => {
         console.warn("Ranked answer submit failed", error);
@@ -1082,8 +1187,9 @@ export function App() {
   }
 
   function startFriend() {
-    updatePath(friendBattlePath(DEFAULT_FRIEND_ROOM));
-    setFriendRoomCode(DEFAULT_FRIEND_ROOM);
+    const nextRoomCode = createRoomCode();
+    updatePath(friendBattlePath(nextRoomCode));
+    setFriendRoomCode(nextRoomCode);
     setFriendJoined(false);
     setFriendPersistence("checking");
     setFriendRole("host");
@@ -1092,6 +1198,13 @@ export function App() {
     setFriendStatus("Creating Supabase friend room...");
     setBattleMode("friend");
     setScreen("friend");
+  }
+
+  function startStreamer() {
+    resetPath();
+    setStreamRoomCode(createRoomCode());
+    setSelectedCategory(categories[1]);
+    setScreen("streamer");
   }
 
   function shareVerdict() {
@@ -1105,9 +1218,9 @@ export function App() {
     isJudgingRef.current = true;
     const nextResult = await requestJudgeVerdict({
       mode: "streamer",
-      category: categories[1],
+      category: selectedCategory,
       opponent: viewerAnswer.name,
-      prompt: getScenario("dating").prompt,
+      prompt: getScenario(selectedCategory.id).prompt,
       yourAnswer: streamerAnswer,
       opponentAnswer: viewerAnswer.text,
     });
@@ -1158,7 +1271,13 @@ export function App() {
       <ResultScreen
         result={result}
         rating={rating}
-        onRematch={() => startBattle(result.mode === "streamer" ? "ranked" : result.mode, botName)}
+        onRematch={() => {
+          if (result.mode === "streamer") {
+            setScreen("streamer");
+            return;
+          }
+          startBattle(result.mode, botName);
+        }}
         onNew={startMatchmaking}
         onHome={goHome}
         onShare={shareVerdict}
@@ -1186,7 +1305,7 @@ export function App() {
         onHome={goHome}
         onFind={startMatchmaking}
         onFriend={startFriend}
-        onStreamer={() => setScreen("streamer")}
+        onStreamer={startStreamer}
       />
     );
   }
@@ -1195,6 +1314,8 @@ export function App() {
     return (
       <StreamerScreen
         roomCode={streamRoomCode}
+        category={selectedCategory}
+        setCategory={setSelectedCategory}
         onHome={goHome}
         onViewer={() => {
           updatePath(streamerViewerPath(streamRoomCode));
@@ -1209,6 +1330,7 @@ export function App() {
     return (
       <ViewerScreen
         roomCode={streamRoomCode}
+        category={selectedCategory}
         onHome={() => {
           resetPath();
           setScreen("streamer");
@@ -1223,11 +1345,7 @@ export function App() {
       setSelectedCategory={setSelectedCategory}
       onFind={startMatchmaking}
       onFriend={startFriend}
-      onStreamer={() => {
-        resetPath();
-        setStreamRoomCode(DEFAULT_STREAM_ROOM);
-        setScreen("streamer");
-      }}
+      onStreamer={startStreamer}
       onProfile={() => setScreen("profile")}
     />
   );
