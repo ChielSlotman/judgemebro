@@ -24,12 +24,16 @@ export default async function handler(request, response) {
   }
 
   try {
-    const providerResult = process.env.OPENAI_API_KEY ? await createOpenAiSpeech(input) : await createGroqSpeech(input);
-    const { speechResponse, contentType } = providerResult;
+    const providerResults = await createSpeech(input);
+    const { speechResponse, contentType, provider } = providerResults;
 
     if (!speechResponse.ok) {
       const errorText = await speechResponse.text();
-      response.status(502).json({ error: `TTS provider failed: ${speechResponse.status}`, detail: errorText.slice(0, 240) });
+      response.status(502).json({
+        error: `TTS provider failed: ${speechResponse.status}`,
+        provider,
+        detail: errorText.slice(0, 500),
+      });
       return;
     }
 
@@ -40,6 +44,21 @@ export default async function handler(request, response) {
   } catch (error) {
     response.status(500).json({ error: "Could not create speech", detail: error.message });
   }
+}
+
+async function createSpeech(input) {
+  const providerOrder = [];
+  if (process.env.GROQ_API_KEY) providerOrder.push(["groq", createGroqSpeech]);
+  if (process.env.OPENAI_API_KEY) providerOrder.push(["openai", createOpenAiSpeech]);
+
+  let lastResult = null;
+  for (const [provider, createProviderSpeech] of providerOrder) {
+    const result = await createProviderSpeech(input);
+    lastResult = { ...result, provider };
+    if (result.speechResponse.ok) return lastResult;
+  }
+
+  return lastResult;
 }
 
 async function createOpenAiSpeech(input) {
