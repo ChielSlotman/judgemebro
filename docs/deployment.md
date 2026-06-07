@@ -30,6 +30,8 @@ For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes cr
 npm ci
 npm run build
 npm run test:judge
+npm run test:supabase
+npm run test:workflows
 npx playwright install --with-deps chromium
 npm run test:smoke
 ```

@@ -32,6 +32,9 @@ jobs:
       - name: Supabase schema check
         run: npm run test:supabase
 
+      - name: Workflow contract check
+        run: npm run test:workflows
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 

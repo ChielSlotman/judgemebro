@@ -81,5 +81,6 @@ printStatus("Supabase URL set", Boolean(env.VITE_SUPABASE_URL), ".env.local");
 printStatus("Supabase publishable key set", Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY), ".env.local");
 printStatus("Vercel config", existsSync(join(root, "vercel.json")));
 printStatus("GitHub CI workflow", existsSync(join(root, ".github", "workflows", "ci.yml")));
+printStatus("GitHub Vercel deploy workflow", existsSync(join(root, ".github", "workflows", "vercel-deploy.yml")));
 printStatus("GitHub Supabase migration workflow", existsSync(join(root, ".github", "workflows", "supabase-migrations.yml")));
 printStatus("Supabase migrations", existsSync(join(root, "supabase", "migrations")));
