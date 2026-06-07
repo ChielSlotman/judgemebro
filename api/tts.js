@@ -1,10 +1,12 @@
 const MAX_OPENAI_TTS_CHARS = 900;
-const MAX_GROQ_TTS_CHARS = 190;
+const MAX_GROQ_TTS_CHARS = 420;
 const DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
 const DEFAULT_OPENAI_TTS_VOICE = "onyx";
 const DEFAULT_GROQ_TTS_MODEL = "canopylabs/orpheus-v1-english";
 const DEFAULT_GROQ_TTS_VOICE = "troy";
-const DEFAULT_GROQ_TTS_STYLE = "playful, cheeky male sports commentator, slight funny accent, natural and punchy";
+const DEFAULT_TTS_PROVIDER = "groq";
+const DEFAULT_GROQ_TTS_STYLE =
+  "cheeky male sports commentator, light funny accent, confident, punchy, natural, not robotic";
 
 export default async function handler(request, response) {
   if (request.method !== "POST") {
@@ -49,8 +51,14 @@ export default async function handler(request, response) {
 
 async function createSpeech(input) {
   const providerOrder = [];
-  if (process.env.GROQ_API_KEY) providerOrder.push(["groq", createGroqSpeech]);
-  if (process.env.OPENAI_API_KEY) providerOrder.push(["openai", createOpenAiSpeech]);
+  const provider = (process.env.TTS_PROVIDER || DEFAULT_TTS_PROVIDER).toLowerCase().trim();
+
+  if (provider === "groq" && process.env.GROQ_API_KEY) providerOrder.push(["groq", createGroqSpeech]);
+  if (provider === "openai" && process.env.OPENAI_API_KEY) providerOrder.push(["openai", createOpenAiSpeech]);
+
+  if (!providerOrder.length) {
+    throw new Error(`${provider || "tts"} TTS is not configured`);
+  }
 
   let lastResult = null;
   for (const [provider, createProviderSpeech] of providerOrder) {
