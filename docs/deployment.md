@@ -15,6 +15,30 @@ Current linked project:
 - production URL: `https://judgemebro.vercel.app`
 - project ID and org ID are stored locally in `.vercel/project.json`, which is intentionally gitignored.
 
+Custom domains attached to the Vercel project:
+
+- `judgemebro.com`
+- `www.judgemebro.com`
+
+DNS is still pending at the registrar. Current DNS points to Hostinger parking. Set:
+
+```text
+A judgemebro.com 76.76.21.21
+```
+
+or switch nameservers to:
+
+```text
+ns1.vercel-dns.com
+ns2.vercel-dns.com
+```
+
+After DNS changes propagate, run:
+
+```bash
+npm run test:deployment
+```
+
 Recommended first-time setup:
 
 ```bash
