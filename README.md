@@ -56,6 +56,14 @@ npm run check:providers
 
 Use `setup:check` for local repo readiness. Use `check:providers` for account-side GitHub, Vercel, custom-domain DNS, and Supabase readiness.
 
+## Launch Audit
+
+```bash
+npm run launch:audit
+```
+
+This command exits non-zero until the GitHub remote, Vercel deployment, custom-domain DNS, local/Vercel Supabase env vars, and Supabase auth are all complete.
+
 ## Setup Docs
 
 - Supabase schema and RLS notes: `docs/supabase.md`

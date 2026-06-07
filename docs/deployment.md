@@ -38,6 +38,7 @@ After DNS changes propagate, run:
 ```bash
 npm run check:providers
 npm run test:deployment
+npm run launch:audit
 ```
 
 Recommended first-time setup:

@@ -65,6 +65,7 @@ After GitHub is connected:
 npm run test:workflows
 npm run check:providers
 npm run setup:check
+npm run launch:audit
 ```
 
 Then verify GitHub Actions in the repository UI. The first CI run should pass before relying on GitHub-based deploys.

@@ -68,6 +68,7 @@ Run:
 npm run test:supabase
 npm run setup:check
 npm run check:providers
+npm run launch:audit
 ```
 
 `test:supabase` statically verifies the local migrations for the prototype security and Realtime invariants. `setup:check` reports whether local Git, Vercel, and Supabase tooling is present. `check:providers` reports whether account-side Vercel env vars, custom-domain DNS, GitHub remote, and Supabase auth are complete.
