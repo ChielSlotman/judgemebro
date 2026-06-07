@@ -55,3 +55,13 @@ Create a digital-product placement exploration for three surfaces:
 - desktop streamer room
 
 Each image should keep the app UI central and avoid fake endorsements, fake pricing claims, and over-dense text.
+
+## Generated Offer Explorer Pack
+
+The prompt-only Digital Product Placements pack is in `docs/creative-production/offer-explorer`.
+
+- 12 prompt families are queued in `jobs.jsonl`.
+- The visual review board is `review-board.html`.
+- The run metadata is `visual-explorer-metadata.json`.
+
+No images were generated in this pass. Use the pack to pick launch asset directions before spending generation credits.

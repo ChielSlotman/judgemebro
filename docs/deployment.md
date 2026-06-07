@@ -34,16 +34,18 @@ npx playwright install --with-deps chromium
 npm run test:smoke
 ```
 
-## Judge API
+## GitHub Vercel Deploy Workflow
 
-Vercel deploys `api/judge.js` as a serverless function. The client calls `/api/judge` first and falls back to the local deterministic judge engine when running in plain Vite preview or when the API is unavailable.
-
-The API intentionally judges only official battles. Streamer viewer answers are stored/displayed by default and should only be sent to `/api/judge` after the streamer manually selects one.
-
-If you later want CLI-based Vercel deployment from GitHub Actions, add these repository secrets:
+`.github/workflows/vercel-deploy.yml` is a manual workflow for preview or production deployment once the GitHub repository has these secrets:
 
 - `VERCEL_TOKEN`
 - `VERCEL_ORG_ID`
 - `VERCEL_PROJECT_ID`
 
-Then add a separate deploy workflow that runs `vercel pull`, `vercel build`, and `vercel deploy --prebuilt`.
+It uses pinned `npx vercel@54.9.1`, so a global Vercel CLI install is not required in CI.
+
+## Judge API
+
+Vercel deploys `api/judge.js` as a serverless function. The client calls `/api/judge` first and falls back to the local deterministic judge engine when running in plain Vite preview or when the API is unavailable.
+
+The API intentionally judges only official battles. Streamer viewer answers are stored/displayed by default and should only be sent to `/api/judge` after the streamer manually selects one.

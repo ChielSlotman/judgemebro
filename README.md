@@ -53,5 +53,5 @@ Use this before pushing/deploying to see whether GitHub, Vercel, and Supabase lo
 
 - Supabase schema and RLS notes: `docs/supabase.md`
 - Vercel and GitHub CI notes: `docs/deployment.md`
-- Creative production brief: `docs/creative-production.md`
+- Creative production brief and generated prompt pack: `docs/creative-production.md`
 - Design QA report: `design-qa.md`

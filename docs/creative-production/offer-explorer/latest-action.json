@@ -1,0 +1,14 @@
+{
+  "id": "review-renderer-materialized",
+  "action": "write_moodboard_widget_payload",
+  "label": "Materialized Creative Production image review",
+  "createdAt": "2026-06-07T00:04:34.566666Z",
+  "timestamp": "2026-06-07T00:04:34.566666Z",
+  "title": "Creative Production Review",
+  "summary": "Review, select, and hand off generated Creative Production images.",
+  "itemCount": 12,
+  "runDirectory": "D:\\judgemebro\\docs\\creative-production\\offer-explorer",
+  "streamPath": "D:\\judgemebro\\docs\\creative-production\\offer-explorer\\data\\stream.json",
+  "runStatePath": "D:\\judgemebro\\docs\\creative-production\\offer-explorer\\run-state.json",
+  "latestActionPath": "D:\\judgemebro\\docs\\creative-production\\offer-explorer\\latest-action.json"
+}

@@ -1,0 +1,27 @@
+{
+  "scale": "family",
+  "pack": "digital-product-placements",
+  "packTitle": "Digital Product Placements",
+  "subjectKind": "digital-product",
+  "families": 12,
+  "routes": 0,
+  "items": 12,
+  "summary": "App, SaaS, and UI-first offer placements where the product interface is the proof.",
+  "whenToUse": "Use when the offer is a digital product, app, SaaS workflow, dashboard, internal tool, or AI feature and the visual needs to prove value through the interface rather than generic software metaphors.",
+  "requiredInputs": [
+    "product name or offer anchor",
+    "workflow or job to be shown",
+    "audience or operator",
+    "proof cues that are allowed",
+    "UI, data, privacy, and brand constraints"
+  ],
+  "riskGates": [
+    "Do not invent real customer names, private data, or unsupported metrics.",
+    "Keep text sparse and directional unless exact UI copy is supplied.",
+    "Avoid generic abstract SaaS glow when the brief needs product proof."
+  ],
+  "review": {
+    "preset": "image-wall",
+    "suppressCaptions": true
+  }
+}

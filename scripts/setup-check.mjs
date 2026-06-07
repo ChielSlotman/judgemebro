@@ -58,13 +58,22 @@ function printStatus(label, ok, detail = "") {
 
 const env = await readEnvExample();
 const vercel = commandExists("vercel");
+const npxVercel = commandExists("npm", ["exec", "vercel", "--", "--version"]);
 const gh = commandExists("gh");
 const supabase = commandExists("supabase");
 const remote = gitRemote();
 
 printStatus("Git repository", existsSync(join(root, ".git")));
 printStatus("Git remote configured", Boolean(remote), remote || "no remote");
-printStatus("Vercel CLI available", vercel.ok, vercel.ok ? vercel.output.split(/\r?\n/)[0] : "install or use npx vercel");
+printStatus(
+  "Vercel CLI available",
+  vercel.ok || npxVercel.ok,
+  vercel.ok
+    ? vercel.output.split(/\r?\n/)[0]
+    : npxVercel.ok
+      ? `npx/npm exec available: ${npxVercel.output.split(/\r?\n/).at(-1)}`
+      : "install or use npx vercel",
+);
 printStatus("Vercel project linked", existsSync(join(root, ".vercel", "project.json")));
 printStatus("GitHub CLI available", gh.ok, gh.ok ? gh.output.split(/\r?\n/)[0] : "install gh or push through GitHub Desktop/web");
 printStatus("Supabase CLI available", supabase.ok, supabase.ok ? supabase.output.split(/\r?\n/)[0] : "install Supabase CLI or use SQL editor");
