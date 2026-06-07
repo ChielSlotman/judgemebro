@@ -214,6 +214,16 @@ function speakBrowserVerdict(narration) {
   window.speechSynthesis.speak(utterance);
 }
 
+function appendVoiceAnswer(current, spokenText) {
+  const spoken = spokenText.replace(/\s+/g, " ").trim();
+  if (!spoken) return current;
+
+  const answer = current.trim();
+  if (answer.toLowerCase().endsWith(spoken.toLowerCase())) return current;
+
+  return clampAnswer(`${answer ? `${answer} ` : ""}${spoken}`);
+}
+
 function useVoiceInput(setValue) {
   const [isListening, setIsListening] = useState(false);
   const [voiceStatus, setVoiceStatus] = useState(VOICE_SUPPORT ? "" : "Voice input is not available in this browser.");
@@ -235,27 +245,35 @@ function useVoiceInput(setValue) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = "en-US";
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
-    let lastTranscript = "";
+    let capturedTranscript = "";
+    let endedWithError = false;
 
     recognition.onstart = () => {
       setIsListening(true);
-      setVoiceStatus("Listening...");
+      setVoiceStatus("Listening. Say one short answer.");
     };
 
     recognition.onresult = (event) => {
-      let transcript = "";
+      const finalChunks = [];
       for (let index = event.resultIndex; index < event.results.length; index += 1) {
-        transcript = `${transcript} ${event.results[index][0]?.transcript || ""}`.trim();
+        const result = event.results[index];
+        if (result.isFinal && result[0]?.transcript) {
+          finalChunks.push(result[0].transcript);
+        }
       }
-      if (!transcript || transcript === lastTranscript) return;
-      lastTranscript = transcript;
-      setValue((current) => clampAnswer(`${current ? `${current.trim()} ` : ""}${transcript.trim()}`));
+
+      const transcript = finalChunks.join(" ").trim();
+      if (!transcript) return;
+
+      capturedTranscript = transcript;
+      setValue((current) => appendVoiceAnswer(current, transcript));
     };
 
     recognition.onerror = (event) => {
+      endedWithError = true;
       setVoiceStatus(event.error === "not-allowed" ? "Mic permission blocked." : "Voice input stopped.");
       setIsListening(false);
       recognitionRef.current = null;
@@ -263,7 +281,9 @@ function useVoiceInput(setValue) {
 
     recognition.onend = () => {
       setIsListening(false);
-      setVoiceStatus(lastTranscript ? "Voice added." : "");
+      if (!endedWithError) {
+        setVoiceStatus(capturedTranscript ? "Voice added." : "No speech captured. Tap Speak and try again.");
+      }
       recognitionRef.current = null;
     };
 
