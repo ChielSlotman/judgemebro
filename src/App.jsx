@@ -34,8 +34,10 @@ import { bots, categories, scenarios, viewerAnswers as seedViewerAnswers } from 
 import {
   createFriendBattleRoom,
   createStreamerRoom,
+  getFriendBattleAnswers,
   findOrCreateRankedMatch,
   getPlayerPresenceId,
+  getRankedBattleAnswers,
   getRankedBattleRoom,
   joinFriendBattleRoom,
   markFriendBattleJudged,
@@ -45,6 +47,7 @@ import {
   submitFriendBattleAnswer,
   submitRankedBattleAnswer,
   subscribeToFriendRoom,
+  subscribeToRankedBattle,
   subscribeToRankedTicket,
   subscribeToStreamerAnswers,
   updateStreamerAnswerState,
@@ -1304,6 +1307,7 @@ export function App() {
   const [rankedPresenceId, setRankedPresenceId] = useState(null);
   const isJudgingRef = useRef(false);
   const narratedResultRef = useRef(null);
+  const completedResultRef = useRef(null);
 
   const botReady = matchElapsed >= 5;
   const currentScenario = getScenario(selectedCategory.id, scenarioRound);
@@ -1525,6 +1529,32 @@ export function App() {
   }, [screen, friendPersistence, friendRoomCode]);
 
   useEffect(() => {
+    if (screen !== "waiting" || !rankedRoom?.id) return undefined;
+
+    const subscription = subscribeToRankedBattle(rankedRoom.id, (payload) => {
+      const room = payload.new;
+      setRankedRoom(room);
+      handleSyncedBattleRoom("ranked", room);
+    });
+
+    handleSyncedBattleRoom("ranked", rankedRoom);
+    return () => subscription.unsubscribe();
+  }, [screen, rankedRoom?.id]);
+
+  useEffect(() => {
+    if (screen !== "waiting" || battleMode !== "friend" || friendPersistence !== "real") return undefined;
+
+    const subscription = subscribeToFriendRoom(friendRoomCode, (payload) => {
+      const room = payload.new;
+      setFriendRoom(room);
+      handleSyncedBattleRoom("friend", room);
+    });
+
+    if (friendRoom) handleSyncedBattleRoom("friend", friendRoom);
+    return () => subscription.unsubscribe();
+  }, [screen, battleMode, friendPersistence, friendRoomCode, friendRoom?.room_code]);
+
+  useEffect(() => {
     if (screen !== "result" || !result) return;
     const resultKey = `${result.mode}:${result.category.id}:${result.yourAnswer}:${result.opponentAnswer}:${result.youWin}`;
     if (narratedResultRef.current === resultKey) return;
@@ -1635,6 +1665,84 @@ export function App() {
     setAuthStatus("Signed out.");
   }
 
+  function latestAnswerFor(answers, presenceId) {
+    return answers.find((item) => item.player_presence_id === presenceId) ?? null;
+  }
+
+  function applyCompletedResult(nextResult, { persist = true } = {}) {
+    if (completedResultRef.current) return;
+    completedResultRef.current = nextResult;
+    setResult(nextResult);
+    if (persist) {
+      recordBattleResult(nextResult).catch((error) => {
+        console.warn("Battle result persistence failed", error);
+      });
+    }
+    setRating((current) => current + nextResult.points);
+    setBattlesLeft((current) => Math.max(0, current - (nextResult.mode === "bot" ? 0 : 1)));
+    setStreak((current) => Math.max(current, 3));
+    setScenarioRound((current) => (current + 1) % getScenarioCount(selectedCategory.id));
+    isJudgingRef.current = false;
+    setScreen("result");
+  }
+
+  async function handleJudgedRoom(mode, room) {
+    if (completedResultRef.current) return;
+    const localPresenceId = mode === "friend" ? friendPresenceId ?? getPlayerPresenceId() : rankedPresenceId ?? getPlayerPresenceId();
+    const answersResult =
+      mode === "friend" ? await getFriendBattleAnswers(room.room_code) : await getRankedBattleAnswers(room.id);
+    const answers = answersResult.answers ?? [];
+    const localAnswer = latestAnswerFor(answers, localPresenceId);
+    const opponentPresenceId = room.host_presence_id === localPresenceId ? room.guest_presence_id : room.host_presence_id;
+    const opponentAnswer = latestAnswerFor(answers, opponentPresenceId);
+    const opponentName = room.host_presence_id === localPresenceId ? room.guest_name || "Friend" : room.host_name || "Opponent";
+    const youWin = room.ai_winner_presence_id === localPresenceId;
+    const points = Math.abs(room.point_delta || 18) * (youWin ? 1 : -1);
+
+    applyCompletedResult(
+      {
+        mode,
+        category: selectedCategory,
+        prompt: room.prompt || currentScenario.prompt,
+        opponent: opponentName,
+        yourAnswer: localAnswer?.answer || answer || "No answer submitted.",
+        opponentAnswer: opponentAnswer?.answer || "No answer submitted.",
+        youWin,
+        points,
+        reason: room.ai_reason || "The AI judge picked the stronger answer.",
+        judgeSource: "synced-room",
+      },
+      { persist: true },
+    );
+  }
+
+  async function handleSyncedBattleRoom(mode, room) {
+    if (!room || completedResultRef.current) return;
+    if (room.status === "judged") {
+      await handleJudgedRoom(mode, room);
+      return;
+    }
+    const readyToJudge = room.host_submitted && room.guest_submitted && ["active", "judging"].includes(room.status);
+    if (!readyToJudge) return;
+
+    const localPresenceId = mode === "friend" ? friendPresenceId ?? getPlayerPresenceId() : rankedPresenceId ?? getPlayerPresenceId();
+    if (room.host_presence_id !== localPresenceId) return;
+
+    const answersResult =
+      mode === "friend" ? await getFriendBattleAnswers(room.room_code) : await getRankedBattleAnswers(room.id);
+    const answers = answersResult.answers ?? [];
+    const hostAnswer = latestAnswerFor(answers, room.host_presence_id);
+    const guestAnswer = latestAnswerFor(answers, room.guest_presence_id);
+    if (!hostAnswer || !guestAnswer) return;
+
+    await finishRound({
+      room,
+      yourAnswer: hostAnswer.answer,
+      opponentAnswer: guestAnswer.answer,
+      opponent: room.guest_name || "Friend",
+    });
+  }
+
   function startMatchmaking() {
     setScreen("matchmaking");
     setMatchElapsed(0);
@@ -1652,6 +1760,7 @@ export function App() {
     setAnswer("");
     setResult(null);
     narratedResultRef.current = null;
+    completedResultRef.current = null;
     isJudgingRef.current = false;
     setScreen("battle");
   }
@@ -1677,32 +1786,32 @@ export function App() {
       });
     }
     setScreen("waiting");
-    window.setTimeout(() => finishRound(), 1600);
+    if (!rankedRoom && !(battleMode === "friend" && friendPersistence === "real")) {
+      window.setTimeout(() => finishRound(), 1600);
+    }
   }
 
-  async function finishRound() {
-    if (isJudgingRef.current) return;
+  async function finishRound(options = {}) {
+    if (isJudgingRef.current || completedResultRef.current) return;
     isJudgingRef.current = true;
     const scenario = currentScenario;
     const nextResult = await requestJudgeVerdict({
       category: selectedCategory,
-      prompt: scenario.prompt,
-      yourAnswer: answer,
-      opponentAnswer: battleMode === "bot" ? scenario.winningAnswer : scenario.opponentAnswer,
+      prompt: options.room?.prompt ?? scenario.prompt,
+      yourAnswer: options.yourAnswer ?? answer,
+      opponentAnswer: options.opponentAnswer ?? (battleMode === "bot" ? scenario.winningAnswer : scenario.opponentAnswer),
       mode: battleMode,
-      opponent: botName ?? "Juno",
+      opponent: options.opponent ?? botName ?? "Juno",
     });
-    setResult(nextResult);
-    recordBattleResult(nextResult).catch((error) => {
-      console.warn("Battle result persistence failed", error);
-    });
-    if (rankedRoom) {
+    const roomForRanked = options.room ?? rankedRoom;
+    const roomForFriend = options.room ?? friendRoom;
+    if (roomForRanked && battleMode === "ranked") {
       const localPresenceId = rankedPresenceId ?? getPlayerPresenceId();
       const opponentPresenceId =
-        rankedRoom.host_presence_id === localPresenceId ? rankedRoom.guest_presence_id : rankedRoom.host_presence_id;
+        roomForRanked.host_presence_id === localPresenceId ? roomForRanked.guest_presence_id : roomForRanked.host_presence_id;
       const winnerPresenceId = nextResult.youWin ? localPresenceId : opponentPresenceId;
       markRankedBattleJudged({
-        roomId: rankedRoom.id,
+        roomId: roomForRanked.id,
         winnerPresenceId,
         reason: nextResult.reason,
         pointDelta: nextResult.points,
@@ -1710,10 +1819,10 @@ export function App() {
         console.warn("Ranked verdict persistence failed", error);
       });
     }
-    if (battleMode === "friend" && friendRoom) {
+    if (battleMode === "friend" && roomForFriend) {
       const localPresenceId = friendPresenceId ?? getPlayerPresenceId();
       const opponentPresenceId =
-        friendRoom.host_presence_id === localPresenceId ? friendRoom.guest_presence_id : friendRoom.host_presence_id;
+        roomForFriend.host_presence_id === localPresenceId ? roomForFriend.guest_presence_id : roomForFriend.host_presence_id;
       const winnerPresenceId = nextResult.youWin ? localPresenceId : opponentPresenceId;
       markFriendBattleJudged({
         roomCode: friendRoomCode,
@@ -1724,12 +1833,7 @@ export function App() {
         console.warn("Friend verdict persistence failed", error);
       });
     }
-    setRating((current) => current + nextResult.points);
-    setBattlesLeft((current) => Math.max(0, current - (battleMode === "bot" ? 0 : 1)));
-    setStreak((current) => Math.max(current, 3));
-    setScenarioRound((current) => (current + 1) % getScenarioCount(selectedCategory.id));
-    isJudgingRef.current = false;
-    setScreen("result");
+    applyCompletedResult(nextResult);
   }
 
   function startFriend() {

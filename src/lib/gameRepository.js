@@ -240,11 +240,13 @@ export async function submitFriendBattleAnswer({ roomCode, answer, playerName = 
   }
 
   const isHost = room.host_presence_id === playerPresenceId;
+  const hostSubmitted = isHost ? true : room.host_submitted;
+  const guestSubmitted = isHost ? room.guest_submitted : true;
   const { error: roomUpdateError } = await supabase
     .from("friend_battle_rooms")
     .update({
-      host_submitted: isHost ? true : room.host_submitted,
-      guest_submitted: isHost ? room.guest_submitted : true,
+      host_submitted: hostSubmitted,
+      guest_submitted: guestSubmitted,
       status: "active",
     })
     .eq("room_code", roomCode);
@@ -255,6 +257,23 @@ export async function submitFriendBattleAnswer({ roomCode, answer, playerName = 
   }
 
   return { ok: true };
+}
+
+export async function getFriendBattleAnswers(roomCode) {
+  if (!hasSupabaseConfig || !supabase || !roomCode) return { skipped: true, answers: [] };
+
+  const { data, error } = await supabase
+    .from("friend_battle_answers")
+    .select("*")
+    .eq("room_code", roomCode)
+    .order("submitted_at", { ascending: false });
+
+  if (error) {
+    console.warn("Supabase friend answers lookup failed", error);
+    return { error, answers: [] };
+  }
+
+  return { answers: data ?? [] };
 }
 
 export async function markFriendBattleJudged({ roomCode, winnerPresenceId, reason, pointDelta = 18 }) {
@@ -354,6 +373,8 @@ export async function submitRankedBattleAnswer({ room, answer }) {
 
   const playerPresenceId = presenceId();
   const isHost = playerPresenceId === room.host_presence_id;
+  const hostSubmitted = isHost ? true : room.host_submitted;
+  const guestSubmitted = isHost ? room.guest_submitted : true;
   const { error: answerError } = await supabase.from("ranked_battle_answers").insert({
     room_id: room.id,
     player_presence_id: playerPresenceId,
@@ -368,9 +389,9 @@ export async function submitRankedBattleAnswer({ room, answer }) {
   const { error: roomError } = await supabase
     .from("ranked_battle_rooms")
     .update({
-      host_submitted: isHost ? true : room.host_submitted,
-      guest_submitted: isHost ? room.guest_submitted : true,
-      status: "judging",
+      host_submitted: hostSubmitted,
+      guest_submitted: guestSubmitted,
+      status: hostSubmitted && guestSubmitted ? "judging" : "active",
     })
     .eq("id", room.id);
 
@@ -380,6 +401,23 @@ export async function submitRankedBattleAnswer({ room, answer }) {
   }
 
   return { ok: true };
+}
+
+export async function getRankedBattleAnswers(roomId) {
+  if (!hasSupabaseConfig || !supabase || !roomId) return { skipped: true, answers: [] };
+
+  const { data, error } = await supabase
+    .from("ranked_battle_answers")
+    .select("*")
+    .eq("room_id", roomId)
+    .order("submitted_at", { ascending: false });
+
+  if (error) {
+    console.warn("Supabase ranked answers lookup failed", error);
+    return { error, answers: [] };
+  }
+
+  return { answers: data ?? [] };
 }
 
 export async function markRankedBattleJudged({ roomId, winnerPresenceId, reason, pointDelta = 18 }) {
