@@ -177,6 +177,9 @@ async function run() {
     await assertVisible(page, "AI judge has spoken", "verdict");
     await assertVisible(page, "You win", "win state");
     await assertVisible(page, "new rating 1146 Gold", "dynamic result rating");
+    await clickButton(page, "Share verdict");
+    await page.waitForTimeout(600);
+    await assertAnyVisible(page, ["Copied verdict", "Shared verdict", "Verdict ready"], "share verdict feedback");
     await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "Open profile");
     await assertVisible(page, "1W / 0L", "profile win/loss updated");

@@ -438,6 +438,28 @@ button:disabled {
   gap: 12px;
 }
 
+.share-status {
+  margin: -2px 0 0;
+  color: var(--lime);
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.share-text {
+  width: 100%;
+  min-height: 132px;
+  padding: 12px;
+  border: 1px solid rgba(184, 255, 0, 0.42);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  resize: vertical;
+}
+
 .category-section {
   margin-top: 32px;
 }

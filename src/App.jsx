@@ -989,7 +989,23 @@ function WaitingScreen({ timer, category, onForceResult }) {
   );
 }
 
-function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
+function verdictShareText(result, rating) {
+  const outcome = result.youWin ? "won" : "lost";
+  const delta = result.points > 0 ? `+${result.points}` : `${result.points}`;
+  const ratingLine = result.mode === "bot" || result.mode === "streamer" ? "unranked" : `${rating} ${rankFromRating(rating)}`;
+  return [
+    `I just ${outcome} a ${result.category.name} dilemma on judgemebro.com.`,
+    `Result: ${delta} (${ratingLine}).`,
+    `Prompt: ${result.prompt}`,
+    `Judge: ${result.reason}`,
+    "Can you make a better decision?",
+    "https://judgemebro.com",
+  ].join("\n");
+}
+
+function ResultScreen({ result, rating, onRematch, onNew, onHome }) {
+  const [shareStatus, setShareStatus] = useState("");
+  const [shareText, setShareText] = useState("");
   const delta = result.points > 0 ? `+${result.points}` : `${result.points}`;
   const newRating = rating;
   const rank = rankFromRating(newRating);
@@ -999,6 +1015,19 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
       : result.mode === "streamer"
         ? "streamer battle"
         : `new rating ${newRating} ${rank}`;
+
+  function shareVerdict() {
+    const text = verdictShareText(result, newRating);
+    setShareText(text);
+    setShareStatus("Verdict ready");
+
+    if (!navigator.clipboard) return;
+
+    navigator.clipboard
+      .writeText(text)
+      .then(() => setShareStatus("Copied verdict"))
+      .catch(() => setShareStatus("Verdict ready"));
+  }
 
   return (
     <main className="screen result-screen">
@@ -1051,14 +1080,18 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
           <button className="outline-button" type="button" onClick={onNew}>
             New opponent
           </button>
-          <button className="outline-button coral" type="button" onClick={onShare}>
-            Share verdict
+          <button className="outline-button coral" type="button" onClick={shareVerdict}>
+            {shareStatus || "Share verdict"}
           </button>
           <button className="outline-button" type="button" onClick={() => speakVerdict(result)}>
             <Volume2 size={22} />
             Replay voice
           </button>
         </div>
+        {shareStatus ? <p className="share-status">{shareStatus}</p> : null}
+        {shareText ? (
+          <textarea className="share-text" value={shareText} readOnly aria-label="Share text" />
+        ) : null}
       </section>
     </main>
   );
@@ -2161,12 +2194,6 @@ export function App() {
     setScreen("streamer");
   }
 
-  function shareVerdict() {
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText("I just got judged on judgemebro.com. Run it back?").catch(() => {});
-    }
-  }
-
   async function officialStreamerBattle(streamerAnswer, viewerAnswer) {
     if (isJudgingRef.current) return;
     isJudgingRef.current = true;
@@ -2237,7 +2264,6 @@ export function App() {
         }}
         onNew={startMatchmaking}
         onHome={goHome}
-        onShare={shareVerdict}
       />
     );
   }
