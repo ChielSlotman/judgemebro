@@ -24,6 +24,7 @@ DNS is still pending at the registrar. Current DNS points to Hostinger parking. 
 
 ```text
 A judgemebro.com 76.76.21.21
+A www.judgemebro.com 76.76.21.21
 ```
 
 or switch nameservers to:
@@ -36,10 +37,13 @@ ns2.vercel-dns.com
 After DNS changes propagate, run:
 
 ```bash
+npm run domain:check
 npm run check:providers
 npm run test:deployment
 npm run launch:audit
 ```
+
+Detailed DNS setup is tracked in `docs/domain.md`.
 
 Recommended first-time setup:
 

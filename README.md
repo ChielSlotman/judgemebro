@@ -49,9 +49,10 @@ npm run verify
 ```bash
 npm run setup:check
 npm run check:providers
+npm run domain:check
 ```
 
-Use `setup:check` for local repo readiness. Use `check:providers` for account-side GitHub, Vercel, custom-domain DNS, and Supabase readiness.
+Use `setup:check` for local repo readiness. Use `check:providers` for account-side GitHub, Vercel, custom-domain DNS, and Supabase readiness. Use `domain:check` for exact current DNS and Vercel domain inspection.
 
 ## Launch Audit
 
@@ -95,6 +96,7 @@ Use this after creating the GitHub repository manually. It adds `origin`, pushes
 
 - Supabase schema and RLS notes: `docs/supabase.md`
 - Vercel and GitHub CI notes: `docs/deployment.md`
+- Custom domain DNS setup: `docs/domain.md`
 - GitHub remote and secrets setup: `docs/github.md`
 - Creative production brief and generated prompt pack: `docs/creative-production.md`
 - Design QA report: `design-qa.md`

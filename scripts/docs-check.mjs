@@ -5,6 +5,7 @@ const root = process.cwd();
 
 const requiredDocs = [
   "docs/deployment.md",
+  "docs/domain.md",
   "docs/supabase.md",
   "docs/github.md",
   "docs/creative-production.md",

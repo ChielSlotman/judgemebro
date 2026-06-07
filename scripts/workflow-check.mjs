@@ -31,6 +31,7 @@ const workflowChecks = [
       "npm run test:vercel-env-sync",
       "npm run test:github-create",
       "npm run test:github-publish",
+      "npm run test:domain",
       "pull --yes",
       "build ${{ inputs.production",
       "deploy --prebuilt",
