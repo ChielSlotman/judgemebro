@@ -674,7 +674,7 @@ function AccountScreen({ user, authStatus, onGoogle, onEmailAuth, onDemo, onSign
               value={password}
               type="password"
               autoComplete={authMode === "login" ? "current-password" : "new-password"}
-              placeholder="8+ characters"
+              placeholder="6+ characters"
               minLength={6}
               required
               onChange={(event) => setPassword(event.target.value)}
@@ -684,9 +684,11 @@ function AccountScreen({ user, authStatus, onGoogle, onEmailAuth, onDemo, onSign
             {authMode === "login" ? "Log in" : "Create account"}
           </button>
         </form>
-        <div className="split-actions">
+        <div className={`split-actions auth-actions ${user ? "" : "single"}`}>
           <button className="outline-button" type="button" onClick={onDemo}>Use demo profile</button>
-          <button className="outline-button coral" type="button" disabled={!user} onClick={onSignOut}>Sign out</button>
+          {user ? (
+            <button className="outline-button coral" type="button" onClick={onSignOut}>Sign out</button>
+          ) : null}
         </div>
         <p className="auth-status">{authStatus}</p>
       </section>
@@ -1582,7 +1584,9 @@ export function App() {
   const [authStatus, setAuthStatus] = useState(
     initialRoute.authCallback
       ? "Checking your sign-in session..."
-      : "Google sign-in is ready when Supabase Auth is configured.",
+      : hasSupabaseConfig
+        ? "Google sign-in and email login are ready."
+        : "Demo profile is available. Supabase Auth is not configured locally.",
   );
   const [legalType, setLegalType] = useState(initialRoute.legalType ?? "terms");
   const [result, setResult] = useState(null);
