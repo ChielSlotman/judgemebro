@@ -40,7 +40,7 @@ npm run build
 npm run verify
 ```
 
-`verify` runs the normal passing repo checks: judge API contract, Supabase schema/config contract, Supabase migration helper plan, GitHub workflow contract, docs contract, Vercel env sync dry run, GitHub publish dry run, live deployment check, setup check, production build, and the full smoke flow.
+`verify` runs the normal passing repo checks: judge API contract, Supabase schema/config contract, Supabase migration helper plan, GitHub workflow contract, docs contract, Vercel env sync dry run, GitHub repo creation dry run, GitHub publish dry run, live deployment check, setup check, production build, and the full smoke flow.
 
 `launch:audit` remains separate because it is expected to fail until external GitHub, DNS, and Supabase account setup is complete.
 
@@ -73,10 +73,17 @@ Use this after `.env.local` contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBL
 ## GitHub Publish
 
 ```bash
+$env:GH_TOKEN = "<github-token>"
+npm run github:create -- --name judgemebro --push --connect-vercel
+```
+
+Use this if you have a GitHub token with repository creation permission. It creates the GitHub repo, adds `origin`, pushes `main`, and can connect the linked Vercel project to the GitHub remote.
+
+```bash
 npm run github:publish -- --remote https://github.com/<owner>/judgemebro.git --connect-vercel
 ```
 
-Use this after creating the GitHub repository. It adds `origin`, pushes `main`, and can connect the linked Vercel project to the GitHub remote.
+Use this after creating the GitHub repository manually. It adds `origin`, pushes `main`, and can connect the linked Vercel project to the GitHub remote.
 
 ## Setup Docs
 

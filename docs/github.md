@@ -4,7 +4,27 @@ This repository is ready to push, but no GitHub remote is configured locally yet
 
 ## Create The Repository
 
-Create a GitHub repository named `judgemebro` through GitHub Desktop or the GitHub web UI.
+Create a GitHub repository named `judgemebro`.
+
+If you have a GitHub token with repository creation permission, this repo can create the remote without GitHub CLI:
+
+```bash
+$env:GH_TOKEN = "<github-token>"
+npm run github:create -- --name judgemebro --push --connect-vercel
+```
+
+For an organization-owned repo:
+
+```bash
+$env:GH_TOKEN = "<github-token>"
+npm run github:create -- --org <org> --name judgemebro --push --connect-vercel
+```
+
+Without a token, create the repo through GitHub Desktop or the GitHub web UI. The local Git user is currently configured as `ChielSlotman`, so the expected personal repo URL would be:
+
+```bash
+https://github.com/ChielSlotman/judgemebro
+```
 
 Then add the remote from this local repo:
 

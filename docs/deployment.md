@@ -86,6 +86,20 @@ npm run verify
 
 It uses pinned `npx vercel@54.9.1`, so a global Vercel CLI install is not required in CI.
 
+Before pulling and deploying the Vercel build, the workflow runs:
+
+```bash
+npm run build
+npm run test:judge
+npm run test:supabase
+npm run test:supabase-migrate
+npm run test:workflows
+npm run test:docs
+npm run test:vercel-env-sync
+npm run test:github-create
+npm run test:github-publish
+```
+
 ## GitHub Supabase Migration Workflow
 
 `.github/workflows/supabase-migrations.yml` is a manual workflow for remote database migrations. It always runs:

@@ -18,6 +18,8 @@
     "check:providers": "node scripts/provider-readiness-check.mjs",
     "launch:audit": "node scripts/launch-audit.mjs",
     "sync:vercel-env": "node scripts/sync-vercel-env.mjs",
+    "github:create": "node scripts/github-create-repo.mjs",
+    "test:github-create": "node scripts/github-create-repo.mjs --dry-run --name judgemebro",
     "github:publish": "node scripts/github-publish.mjs",
     "test:github-publish": "node scripts/github-publish.mjs --dry-run --remote https://github.com/example/judgemebro.git --connect-vercel",
     "supabase:migrate": "node scripts/supabase-migrate.mjs",

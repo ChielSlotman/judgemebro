@@ -7,6 +7,7 @@ const steps = [
   ["npm", ["run", "test:workflows"]],
   ["npm", ["run", "test:docs"]],
   ["npm", ["run", "test:vercel-env-sync"]],
+  ["npm", ["run", "test:github-create"]],
   ["npm", ["run", "test:github-publish"]],
   ["npm", ["run", "test:deployment"]],
   ["npm", ["run", "setup:check"]],
