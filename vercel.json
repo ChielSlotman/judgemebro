@@ -10,6 +10,7 @@
     { "source": "/terms", "destination": "/" },
     { "source": "/privacy", "destination": "/" },
     { "source": "/account", "destination": "/" },
+    { "source": "/auth/callback", "destination": "/" },
     { "source": "/profile", "destination": "/" },
     { "source": "/rewards", "destination": "/" }
   ]

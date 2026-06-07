@@ -129,6 +129,12 @@ async function run() {
     await assertVisible(page, "Privacy Policy", "privacy deep link");
     await page.goto(`${baseUrl}/account`, { waitUntil: "load" });
     await assertVisible(page, "Log in", "account deep link");
+    await page.goto(`${baseUrl}/auth/callback`, { waitUntil: "load" });
+    await assertAnyVisible(
+      page,
+      ["Checking your sign-in session", "No active sign-in session found", "Signed in with Google"],
+      "auth callback route",
+    );
     await page.goto(`${baseUrl}/profile`, { waitUntil: "load" });
     await assertVisible(page, "Recent battles", "profile deep link");
     await page.goto(`${baseUrl}/rewards`, { waitUntil: "load" });

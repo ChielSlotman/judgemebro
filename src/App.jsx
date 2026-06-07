@@ -101,6 +101,7 @@ function streamerViewerPath(roomCode) {
 }
 
 function appScreenPath(screen, legalType = "terms") {
+  if (screen === "auth-callback") return "/auth/callback";
   if (screen === "account") return "/account";
   if (screen === "profile") return "/profile";
   if (screen === "rewards") return "/rewards";
@@ -133,6 +134,7 @@ function parseInitialPath(pathname) {
   if (streamMatch) return { screen: "viewer", roomCode: streamMatch[1].toUpperCase() };
 
   if (pathname === "/account") return { screen: "account" };
+  if (pathname === "/auth/callback") return { screen: "account", authCallback: true };
   if (pathname === "/profile") return { screen: "profile" };
   if (pathname === "/rewards") return { screen: "rewards" };
   if (pathname === "/terms") return { screen: "legal", legalType: "terms" };
@@ -1396,7 +1398,11 @@ export function App() {
     readStoredJson("category-ratings", initialCategoryRatings()),
   );
   const [user, setUser] = useState(() => readStoredJson("user", null));
-  const [authStatus, setAuthStatus] = useState("Google sign-in is ready when Supabase Auth is configured.");
+  const [authStatus, setAuthStatus] = useState(
+    initialRoute.authCallback
+      ? "Checking your sign-in session..."
+      : "Google sign-in is ready when Supabase Auth is configured.",
+  );
   const [legalType, setLegalType] = useState(initialRoute.legalType ?? "terms");
   const [result, setResult] = useState(null);
   const [friendJoined, setFriendJoined] = useState(initialRoute.screen === "friend");
@@ -1448,9 +1454,29 @@ export function App() {
   useEffect(() => {
     if (!supabase) return undefined;
     let cancelled = false;
+    const authCode = new URLSearchParams(window.location.search).get("code");
+
+    if (initialRoute.authCallback && authCode) {
+      setAuthStatus("Finishing Google sign-in...");
+      supabase.auth.exchangeCodeForSession(authCode).then(({ error }) => {
+        if (cancelled) return;
+        if (error) {
+          setAuthStatus(`Google sign-in failed: ${error.message}`);
+          return;
+        }
+        window.history.replaceState({}, "", "/account");
+        setAuthStatus("Signed in with Google.");
+      });
+    } else if (initialRoute.authCallback) {
+      setAuthStatus("Checking your sign-in session...");
+    }
 
     supabase.auth.getSession().then(({ data }) => {
-      if (cancelled || !data.session?.user) return;
+      if (cancelled) return;
+      if (!data.session?.user) {
+        if (initialRoute.authCallback) setAuthStatus("No active sign-in session found. Try Google again.");
+        return;
+      }
       const nextUser = data.session.user;
       setUser({
         name: nextUser.user_metadata?.full_name || nextUser.email?.split("@")[0] || "Player",
@@ -1460,10 +1486,12 @@ export function App() {
       setAuthStatus("Signed in with Google.");
     });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (!session?.user) {
-        setUser(null);
-        setAuthStatus("Signed out.");
+        if (event === "SIGNED_OUT") {
+          setUser(null);
+          setAuthStatus("Signed out.");
+        }
         return;
       }
       setUser({
@@ -1724,7 +1752,7 @@ export function App() {
     setAuthStatus("Opening Google sign-in...");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     });
     if (error) setAuthStatus(`Google sign-in failed: ${error.message}`);
   }
@@ -1753,7 +1781,10 @@ export function App() {
         ? supabase.auth.signUp({
             email: cleanEmail,
             password,
-            options: { data: { full_name: cleanName || cleanEmail.split("@")[0] } },
+            options: {
+              data: { full_name: cleanName || cleanEmail.split("@")[0] },
+              emailRedirectTo: `${window.location.origin}/auth/callback`,
+            },
           })
         : supabase.auth.signInWithPassword({ email: cleanEmail, password });
 
