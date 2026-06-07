@@ -95,6 +95,10 @@ if (!seedConfig.includes("enabled = false")) {
   failures.push("supabase/config.toml should keep db.seed disabled until seed.sql exists");
 }
 
+if (!migrationSql.includes("host_presence_id") || !migrationSql.includes("prototype streamers can create live rooms")) {
+  failures.push("Supabase migrations must support prototype streamer rooms by host_presence_id");
+}
+
 if (failures.length) {
   console.error("Supabase schema check failed:");
   for (const failure of failures) {

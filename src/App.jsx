@@ -30,6 +30,7 @@ import {
 import { bots, categories, scenarios, viewerAnswers as seedViewerAnswers } from "./data.js";
 import {
   createFriendBattleRoom,
+  createStreamerRoom,
   findOrCreateRankedMatch,
   getPlayerPresenceId,
   getRankedBattleRoom,
@@ -42,6 +43,8 @@ import {
   submitRankedBattleAnswer,
   subscribeToFriendRoom,
   subscribeToRankedTicket,
+  subscribeToStreamerAnswers,
+  updateStreamerAnswerState,
 } from "./lib/gameRepository.js";
 import { requestJudgeVerdict } from "./lib/judgeClient.js";
 
@@ -576,6 +579,14 @@ function ProfileScreen({ onHome, onFind, onFriend, onStreamer }) {
   );
 }
 
+function normalizeViewerAnswer(answer) {
+  return {
+    id: answer.id,
+    name: answer.display_name ?? answer.name,
+    text: answer.answer ?? answer.text,
+  };
+}
+
 function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
   const [streamerAnswer, setStreamerAnswer] = useState(
     "Fair, but sparks are overrated. I prefer tension that actually builds.",
@@ -583,6 +594,53 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
   const [answers, setAnswers] = useState(seedViewerAnswers);
   const [selected, setSelected] = useState(seedViewerAnswers[0]);
   const [copied, setCopied] = useState(false);
+  const [streamStatus, setStreamStatus] = useState("Viewer answers are free until selected.");
+
+  useEffect(() => {
+    let cancelled = false;
+    const currentPrompt = getScenario("dating").prompt;
+
+    createStreamerRoom({
+      roomCode,
+      roomName: "Kai's room",
+      categoryId: "dating",
+      currentPrompt,
+    })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.skipped) {
+          setStreamStatus("Viewer answers stay local until Supabase env is connected.");
+          return;
+        }
+        if (result.error) {
+          setStreamStatus("Streamer room sync had an issue. Local viewer list is active.");
+          return;
+        }
+        setStreamStatus("Supabase room live. Viewer answers appear here without AI cost.");
+      })
+      .catch((error) => {
+        console.warn("Streamer room sync failed", error);
+        if (!cancelled) setStreamStatus("Streamer room sync had an issue. Local viewer list is active.");
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [roomCode]);
+
+  useEffect(() => {
+    const subscription = subscribeToStreamerAnswers(roomCode, (payload) => {
+      const nextAnswer = normalizeViewerAnswer(payload.new);
+      if (!nextAnswer.id || payload.new?.hidden) return;
+
+      setAnswers((current) => {
+        const withoutExisting = current.filter((answer) => answer.id !== nextAnswer.id);
+        return [nextAnswer, ...withoutExisting].slice(0, 24);
+      });
+    });
+
+    return () => subscription.unsubscribe();
+  }, [roomCode]);
 
   function copyViewerLink() {
     const link = streamerViewerLink(roomCode);
@@ -595,9 +653,26 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
 
   function hideAnswer(id) {
     setAnswers((current) => current.filter((answer) => answer.id !== id));
+    updateStreamerAnswerState({ answerId: id, hidden: true }).catch((error) => {
+      console.warn("Streamer answer hide failed", error);
+    });
     if (selected?.id === id) {
       setSelected(answers.find((answer) => answer.id !== id) ?? null);
     }
+  }
+
+  function showAnswer(answer) {
+    setSelected(answer);
+    updateStreamerAnswerState({ answerId: answer.id, selectedForStream: true }).catch((error) => {
+      console.warn("Streamer answer show failed", error);
+    });
+  }
+
+  function pickOfficial(answer) {
+    updateStreamerAnswerState({ answerId: answer.id, selectedForOfficialBattle: true }).catch((error) => {
+      console.warn("Streamer official pick failed", error);
+    });
+    onOfficial(streamerAnswer, answer);
   }
 
   return (
@@ -607,7 +682,7 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
         <div>
           <span className="live-pill">Live room</span>
           <h1>Chat gets judged</h1>
-          <p>Room {roomCode}. 241 viewers. Viewer answers are free until selected.</p>
+          <p>Room {roomCode}. 241 viewers. {streamStatus}</p>
         </div>
         <div className="stream-actions">
           <button className="outline-button" type="button" onClick={copyViewerLink}>
@@ -638,9 +713,9 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
               <strong>{answer.name}</strong>
               <p>{answer.text}</p>
               <div>
-                <button type="button" onClick={() => setSelected(answer)}>Show</button>
+                <button type="button" onClick={() => showAnswer(answer)}>Show</button>
                 <button type="button" onClick={() => hideAnswer(answer.id)}>Hide</button>
-                <button type="button" onClick={() => onOfficial(streamerAnswer, answer)}>Pick official</button>
+                <button type="button" onClick={() => pickOfficial(answer)}>Pick official</button>
               </div>
             </article>
           ))}
@@ -648,7 +723,7 @@ function StreamerScreen({ roomCode, onHome, onViewer, onOfficial }) {
         <section className="broadcast-preview">
           <span>Showing on stream</span>
           <h2>{selected?.text ?? "Pick a viewer answer to show live."}</h2>
-          <button className="primary-button judge small" type="button" onClick={() => selected && onOfficial(streamerAnswer, selected)}>
+          <button className="primary-button judge small" type="button" onClick={() => selected && pickOfficial(selected)}>
             Official battle
           </button>
         </section>

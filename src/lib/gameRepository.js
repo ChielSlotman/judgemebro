@@ -11,6 +11,10 @@ function randomId(prefix) {
   return `${prefix}-${cryptoValue}`.slice(0, 80);
 }
 
+function isUuid(value) {
+  return typeof value === "string" && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function presenceId() {
   if (typeof window === "undefined") return randomId("server");
 
@@ -74,6 +78,58 @@ export async function recordViewerSubmission({ roomCode, displayName, answer }) 
 
   if (error) {
     console.warn("Supabase viewer answer insert failed", error);
+    return { error };
+  }
+
+  return { ok: true };
+}
+
+export async function createStreamerRoom({
+  roomCode,
+  roomName = "Kai's room",
+  categoryId = "dating",
+  currentPrompt = "",
+}) {
+  if (!hasSupabaseConfig || !supabase) return { skipped: true };
+
+  const hostPresenceId = presenceId();
+  const { data, error } = await supabase
+    .from("streamer_rooms")
+    .upsert(
+      {
+        room_code: roomCode,
+        room_name: roomName,
+        host_presence_id: hostPresenceId,
+        category_id: categoryId,
+        current_prompt: currentPrompt,
+        is_live: true,
+      },
+      { onConflict: "room_code" },
+    )
+    .select()
+    .single();
+
+  if (error) {
+    console.warn("Supabase streamer room upsert failed", error);
+    return { error };
+  }
+
+  return { room: data, hostPresenceId };
+}
+
+export async function updateStreamerAnswerState({ answerId, hidden, selectedForStream, selectedForOfficialBattle }) {
+  if (!hasSupabaseConfig || !supabase || !isUuid(answerId)) return { skipped: true };
+
+  const payload = {};
+  if (typeof hidden === "boolean") payload.hidden = hidden;
+  if (typeof selectedForStream === "boolean") payload.selected_for_stream = selectedForStream;
+  if (typeof selectedForOfficialBattle === "boolean") {
+    payload.selected_for_official_battle = selectedForOfficialBattle;
+  }
+
+  const { error } = await supabase.from("streamer_viewer_answers").update(payload).eq("id", answerId);
+  if (error) {
+    console.warn("Supabase streamer answer update failed", error);
     return { error };
   }
 
