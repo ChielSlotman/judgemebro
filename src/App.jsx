@@ -100,6 +100,14 @@ function streamerViewerPath(roomCode) {
   return `/stream/${roomCode}`;
 }
 
+function appScreenPath(screen, legalType = "terms") {
+  if (screen === "account") return "/account";
+  if (screen === "profile") return "/profile";
+  if (screen === "rewards") return "/rewards";
+  if (screen === "legal") return legalType === "privacy" ? "/privacy" : "/terms";
+  return "/";
+}
+
 function friendBattleLink(roomCode) {
   return `${inviteBaseUrl()}${friendBattlePath(roomCode)}`;
 }
@@ -117,14 +125,20 @@ function createRoomCode() {
   return code;
 }
 
-function parseInvitePath(pathname) {
+function parseInitialPath(pathname) {
   const friendMatch = pathname.match(/^\/battle\/([^/]+)\/?$/);
   if (friendMatch) return { screen: "friend", roomCode: friendMatch[1].toUpperCase() };
 
   const streamMatch = pathname.match(/^\/stream\/([^/]+)\/?$/);
   if (streamMatch) return { screen: "viewer", roomCode: streamMatch[1].toUpperCase() };
 
-  return null;
+  if (pathname === "/account") return { screen: "account" };
+  if (pathname === "/profile") return { screen: "profile" };
+  if (pathname === "/rewards") return { screen: "rewards" };
+  if (pathname === "/terms") return { screen: "legal", legalType: "terms" };
+  if (pathname === "/privacy") return { screen: "legal", legalType: "privacy" };
+
+  return { screen: "home" };
 }
 
 function updatePath(path) {
@@ -135,6 +149,10 @@ function updatePath(path) {
 function resetPath() {
   if (typeof window === "undefined") return;
   window.history.replaceState({}, "", "/");
+}
+
+function setAppPath(screen, legalType = "terms") {
+  updatePath(appScreenPath(screen, legalType));
 }
 
 function readStoredJson(key, fallback) {
@@ -1356,15 +1374,15 @@ function ViewerScreen({ roomCode, category, scenario, onHome }) {
 }
 
 export function App() {
-  const initialInvite = useMemo(() => parseInvitePath(window.location.pathname), []);
-  const [screen, setScreen] = useState(initialInvite?.screen ?? "home");
+  const initialRoute = useMemo(() => parseInitialPath(window.location.pathname), []);
+  const [screen, setScreen] = useState(initialRoute.screen);
   const [selectedCategory, setSelectedCategory] = useState(categories[5]);
   const [scenarioRound, setScenarioRound] = useState(0);
   const [friendRoomCode, setFriendRoomCode] = useState(
-    initialInvite?.screen === "friend" ? initialInvite.roomCode : DEFAULT_FRIEND_ROOM,
+    initialRoute.screen === "friend" ? initialRoute.roomCode : DEFAULT_FRIEND_ROOM,
   );
   const [streamRoomCode, setStreamRoomCode] = useState(
-    initialInvite?.screen === "viewer" ? initialInvite.roomCode : DEFAULT_STREAM_ROOM,
+    initialRoute.screen === "viewer" ? initialRoute.roomCode : DEFAULT_STREAM_ROOM,
   );
   const [matchElapsed, setMatchElapsed] = useState(0);
   const [timer, setTimer] = useState(24);
@@ -1379,15 +1397,15 @@ export function App() {
   );
   const [user, setUser] = useState(() => readStoredJson("user", null));
   const [authStatus, setAuthStatus] = useState("Google sign-in is ready when Supabase Auth is configured.");
-  const [legalType, setLegalType] = useState("terms");
+  const [legalType, setLegalType] = useState(initialRoute.legalType ?? "terms");
   const [result, setResult] = useState(null);
-  const [friendJoined, setFriendJoined] = useState(initialInvite?.screen === "friend");
-  const [friendPersistence, setFriendPersistence] = useState(initialInvite?.screen === "friend" ? "checking" : "fallback");
-  const [friendRole, setFriendRole] = useState(initialInvite?.screen === "friend" ? "guest" : "host");
+  const [friendJoined, setFriendJoined] = useState(initialRoute.screen === "friend");
+  const [friendPersistence, setFriendPersistence] = useState(initialRoute.screen === "friend" ? "checking" : "fallback");
+  const [friendRole, setFriendRole] = useState(initialRoute.screen === "friend" ? "guest" : "host");
   const [friendRoom, setFriendRoom] = useState(null);
   const [friendPresenceId, setFriendPresenceId] = useState(null);
   const [friendStatus, setFriendStatus] = useState("Send the link. Same prompt, 30s answers, AI verdict.");
-  const [battleMode, setBattleMode] = useState(initialInvite?.screen === "friend" ? "friend" : "ranked");
+  const [battleMode, setBattleMode] = useState(initialRoute.screen === "friend" ? "friend" : "ranked");
   const [botName, setBotName] = useState(null);
   const [matchmakingStatus, setMatchmakingStatus] = useState("Opening the judge queue...");
   const [rankedRoom, setRankedRoom] = useState(null);
@@ -1677,7 +1695,13 @@ export function App() {
 
   function openLegal(type = "terms") {
     setLegalType(type);
+    setAppPath("legal", type);
     setScreen("legal");
+  }
+
+  function openScreen(nextScreen) {
+    setAppPath(nextScreen);
+    setScreen(nextScreen);
   }
 
   function nextScenario(categoryId = selectedCategory.id) {
@@ -1847,6 +1871,7 @@ export function App() {
   }
 
   function startMatchmaking() {
+    resetPath();
     setScreen("matchmaking");
     setMatchElapsed(0);
     setBattleMode("ranked");
@@ -1857,6 +1882,7 @@ export function App() {
   }
 
   function startBattle(mode = "ranked", nextBotName = null) {
+    resetPath();
     setBattleMode(mode);
     setBotName(nextBotName);
     setTimer(24);
@@ -2067,7 +2093,7 @@ export function App() {
         onFind={startMatchmaking}
         onFriend={startFriend}
         onStreamer={startStreamer}
-        onAccount={() => setScreen("account")}
+        onAccount={() => openScreen("account")}
         onLegal={openLegal}
       />
     );
@@ -2083,7 +2109,7 @@ export function App() {
         onDemo={signInDemo}
         onSignOut={signOut}
         onHome={goHome}
-        onProfile={() => setScreen("profile")}
+        onProfile={() => openScreen("profile")}
         onLegal={openLegal}
       />
     );
@@ -2098,7 +2124,7 @@ export function App() {
         onClaim={claimStreakReward}
         onHome={goHome}
         onFind={startMatchmaking}
-        onProfile={() => setScreen("profile")}
+        onProfile={() => openScreen("profile")}
       />
     );
   }
@@ -2147,8 +2173,8 @@ export function App() {
       onFind={startMatchmaking}
       onFriend={startFriend}
       onStreamer={startStreamer}
-      onProfile={() => setScreen("profile")}
-      onRewards={() => setScreen("rewards")}
+      onProfile={() => openScreen("profile")}
+      onRewards={() => openScreen("rewards")}
       rewardClaimed={rewardClaimed}
     />
   );

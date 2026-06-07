@@ -123,6 +123,18 @@ async function run() {
     await assertVisible(page, "judgemebro", "brand");
     await assertVisible(page, "Find opponent", "primary CTA");
 
+    await page.goto(`${baseUrl}/terms`, { waitUntil: "load" });
+    await assertVisible(page, "Terms and Conditions", "terms deep link");
+    await page.goto(`${baseUrl}/privacy`, { waitUntil: "load" });
+    await assertVisible(page, "Privacy Policy", "privacy deep link");
+    await page.goto(`${baseUrl}/account`, { waitUntil: "load" });
+    await assertVisible(page, "Log in", "account deep link");
+    await page.goto(`${baseUrl}/profile`, { waitUntil: "load" });
+    await assertVisible(page, "Recent battles", "profile deep link");
+    await page.goto(`${baseUrl}/rewards`, { waitUntil: "load" });
+    await assertVisible(page, "Rewards", "rewards deep link");
+
+    await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "3-day streak Tap to claim your extra battle.");
     await assertVisible(page, "Rewards", "rewards screen");
     await clickButton(page, "Claim extra battle");

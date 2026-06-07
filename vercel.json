@@ -6,6 +6,11 @@
   "installCommand": "npm ci",
   "rewrites": [
     { "source": "/battle/:path*", "destination": "/" },
-    { "source": "/stream/:path*", "destination": "/" }
+    { "source": "/stream/:path*", "destination": "/" },
+    { "source": "/terms", "destination": "/" },
+    { "source": "/privacy", "destination": "/" },
+    { "source": "/account", "destination": "/" },
+    { "source": "/profile", "destination": "/" },
+    { "source": "/rewards", "destination": "/" }
   ]
 }
