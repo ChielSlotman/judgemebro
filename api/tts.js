@@ -91,7 +91,7 @@ async function createGroqSpeech(input) {
     body: JSON.stringify({
       model: process.env.GROQ_TTS_MODEL || DEFAULT_GROQ_TTS_MODEL,
       voice: process.env.GROQ_TTS_VOICE || DEFAULT_GROQ_TTS_VOICE,
-      input: `[confident] ${input}`.slice(0, MAX_GROQ_TTS_CHARS),
+      input: `[playful, cheeky, slightly funny commentator] ${input}`.slice(0, MAX_GROQ_TTS_CHARS),
       response_format: "wav",
     }),
   });
