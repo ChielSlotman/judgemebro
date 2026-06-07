@@ -1626,6 +1626,11 @@ export function App() {
   const rewardClaimed = rewardClaimDate === todayKey();
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    document.scrollingElement?.scrollTo?.({ top: 0, left: 0, behavior: "auto" });
+  }, [screen]);
+
+  useEffect(() => {
     writeStoredJson("user", user);
   }, [user]);
 
