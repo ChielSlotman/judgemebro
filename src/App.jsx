@@ -1606,7 +1606,7 @@ export function App() {
   );
   const [legalType, setLegalType] = useState(initialRoute.legalType ?? "terms");
   const [result, setResult] = useState(null);
-  const [friendJoined, setFriendJoined] = useState(initialRoute.screen === "friend");
+  const [friendJoined, setFriendJoined] = useState(false);
   const [friendPersistence, setFriendPersistence] = useState(initialRoute.screen === "friend" ? "checking" : "fallback");
   const [friendRole, setFriendRole] = useState(initialRoute.screen === "friend" ? "guest" : "host");
   const [friendRoom, setFriendRoom] = useState(null);
@@ -1797,10 +1797,10 @@ export function App() {
   }, [screen, timer]);
 
   useEffect(() => {
-    if (screen !== "friend" || friendPersistence !== "fallback") return undefined;
+    if (screen !== "friend" || friendPersistence !== "fallback" || friendRole !== "host") return undefined;
     const timeout = window.setTimeout(() => setFriendJoined(true), 1800);
     return () => window.clearTimeout(timeout);
-  }, [screen, friendPersistence]);
+  }, [screen, friendPersistence, friendRole]);
 
   useEffect(() => {
     if (screen !== "friend" || friendPersistence !== "checking") return undefined;
@@ -1823,18 +1823,25 @@ export function App() {
 
         if (result.skipped) {
           setFriendPersistence("fallback");
-          setFriendStatus("Send the link. Same prompt, 30s answers, AI verdict.");
+          setFriendJoined(false);
+          setFriendStatus(
+            friendRole === "host"
+              ? "Send the link. Same prompt, 30s answers, AI verdict."
+              : "Room is not live yet. Waiting for the host.",
+          );
           return;
         }
 
         if (result.missing) {
           setFriendPersistence("fallback");
+          setFriendJoined(false);
           setFriendStatus("Room is not live yet. Showing the invite preview.");
           return;
         }
 
         if (result.error) {
           setFriendPersistence("fallback");
+          setFriendJoined(false);
           setFriendStatus("Friend room is running in preview mode.");
           return;
         }
