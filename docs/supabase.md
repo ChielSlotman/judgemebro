@@ -21,14 +21,15 @@ The initial schema is in:
 supabase/migrations/20260606230000_initial_judgemebro_schema.sql
 ```
 
-The local Supabase CLI was not installed when this file was created, so this migration is intentionally marked as manually created. After installing the CLI, prefer:
+After installing the CLI and linking a project, preview and push the checked-in migrations with:
 
 ```bash
-supabase migration new initial_judgemebro_schema
+supabase link
+supabase db push --dry-run
 supabase db push
 ```
 
-or apply the checked-in SQL through the Supabase SQL editor.
+If the CLI is not available, apply the checked-in SQL files through the Supabase SQL editor in timestamp order.
 
 ## Security Model
 
@@ -64,10 +65,11 @@ RLS still applies to Realtime visibility. Streamer answer subscriptions are inte
 Run:
 
 ```bash
+npm run test:supabase
 npm run setup:check
 ```
 
-This reports whether Git remotes, Vercel CLI/linking, GitHub CLI, Supabase CLI, and Supabase env vars are present.
+`test:supabase` statically verifies the local migrations for the prototype security and Realtime invariants. `setup:check` reports whether Git remotes, Vercel CLI/linking, GitHub CLI, Supabase CLI, and Supabase env vars are present.
 
 ## Prototype Tables
 

@@ -29,6 +29,9 @@ jobs:
       - name: Judge API contract test
         run: npm run test:judge
 
+      - name: Supabase schema check
+        run: npm run test:supabase
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 

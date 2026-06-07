@@ -36,10 +36,11 @@ npm run build
 
 ```bash
 npm run test:judge
+npm run test:supabase
 npm run test:smoke
 ```
 
-The judge test validates the Vercel API contract. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
+The judge test validates the Vercel API contract. The Supabase test statically checks that public tables have RLS and policies, that Realtime tables are published, and that the service-role key is not referenced by client source. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
 
 ## Setup Check
 
