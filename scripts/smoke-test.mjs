@@ -146,10 +146,11 @@ async function run() {
     await assertVisible(page, "Rewards", "rewards deep link");
 
     await page.goto(baseUrl, { waitUntil: "load" });
-    await clickButton(page, "3-day streak Tap to claim your extra battle.");
+    await clickButton(page, /3-day streak.*extra battle/i);
     await assertVisible(page, "Rewards", "rewards screen");
     await clickButton(page, "Claim extra battle");
     await assertVisible(page, "Reward claimed", "claimed streak reward");
+    await assertVisible(page, "New daily claim unlocks tomorrow", "daily reward reset copy");
     await page.goto(baseUrl, { waitUntil: "load" });
     await assertLocatorText(page, ".stats-row", /5\s+BATTLES LEFT TODAY/i, "home battles-left after reward");
 

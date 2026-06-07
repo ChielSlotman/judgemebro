@@ -207,6 +207,10 @@ function writeStoredJson(key, value) {
   window.localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(value));
 }
 
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function rankFromRating(rating) {
   if (rating >= 1800) return "Master";
   if (rating >= 1500) return "Diamond";
@@ -524,6 +528,7 @@ function HomeScreen({
   rewardClaimed,
 }) {
   const rank = rankFromRating(rating);
+  const rewardCopy = rewardClaimed ? "Reward claimed today. Come back tomorrow." : "Tap to claim today's extra battle.";
 
   return (
     <main className="screen home-screen">
@@ -603,7 +608,7 @@ function HomeScreen({
         <Gift size={34} />
         <span>
           <strong>3-day streak</strong>
-          {rewardClaimed ? "Reward claimed. Keep playing for the next drop." : "Tap to claim your extra battle."}
+          {rewardCopy}
         </span>
         <ChevronRight size={26} />
       </button>
@@ -707,12 +712,15 @@ function AccountScreen({ user, authStatus, onGoogle, onEmailAuth, onDemo, onSign
   );
 }
 
-function RewardScreen({ streak, battlesLeft, rewardClaimed, onClaim, onHome, onFind, onProfile }) {
+function RewardScreen({ streak, battlesLeft, rewardClaimed, rewardDate, onClaim, onHome, onFind, onProfile }) {
   const rewards = [
     { title: "3-day streak", status: rewardClaimed ? "Claimed" : "Ready", detail: "Claim one extra ranked battle for today." },
     { title: "5-day streak", status: "Next", detail: "Unlock a fresh prompt pack preview." },
     { title: "7-day streak", status: "Locked", detail: "Double points token for one battle." },
   ];
+  const rewardHint = rewardClaimed
+    ? `Claimed for ${rewardDate}. New daily claim unlocks tomorrow.`
+    : "Daily claim is ready. Take the extra ranked battle before you queue.";
 
   return (
     <main className="screen reward-screen">
@@ -721,7 +729,7 @@ function RewardScreen({ streak, battlesLeft, rewardClaimed, onClaim, onHome, onF
         <Gift size={54} />
         <span className="section-label">Rewards</span>
         <h1>{streak}-day streak</h1>
-        <p>{battlesLeft} ranked battles left today. Keep playing to unlock the next drop.</p>
+        <p>{battlesLeft} ranked battles left today. {rewardHint}</p>
       </section>
       <section className="reward-list">
         {rewards.map((reward) => (
@@ -1567,7 +1575,11 @@ export function App() {
   const [rating, setRating] = useState(() => readStoredNumber("rating", 1128));
   const [streak, setStreak] = useState(() => readStoredNumber("streak", 3));
   const [battlesLeft, setBattlesLeft] = useState(() => readStoredNumber("battles-left", 4));
-  const [rewardClaimed, setRewardClaimed] = useState(() => readStoredJson("reward-claimed", false));
+  const [rewardClaimDate, setRewardClaimDate] = useState(() => {
+    const storedDate = readStoredJson("reward-claim-date", "");
+    if (storedDate) return storedDate;
+    return readStoredJson("reward-claimed", false) ? todayKey() : "";
+  });
   const [battleHistory, setBattleHistory] = useState(() => readStoredJson("battle-history", []));
   const [categoryRatings, setCategoryRatings] = useState(() =>
     readStoredJson("category-ratings", initialCategoryRatings()),
@@ -1597,6 +1609,7 @@ export function App() {
 
   const botReady = matchElapsed >= 5;
   const currentScenario = getScenario(selectedCategory.id, scenarioRound);
+  const rewardClaimed = rewardClaimDate === todayKey();
 
   useEffect(() => {
     writeStoredJson("user", user);
@@ -1615,8 +1628,9 @@ export function App() {
   }, [battlesLeft]);
 
   useEffect(() => {
-    writeStoredJson("reward-claimed", rewardClaimed);
-  }, [rewardClaimed]);
+    writeStoredJson("reward-claim-date", rewardClaimDate);
+    writeStoredJson("reward-claimed", rewardClaimDate === todayKey());
+  }, [rewardClaimDate]);
 
   useEffect(() => {
     writeStoredJson("battle-history", battleHistory);
@@ -1914,7 +1928,7 @@ export function App() {
 
   function claimStreakReward() {
     if (rewardClaimed) return;
-    setRewardClaimed(true);
+    setRewardClaimDate(todayKey());
     setBattlesLeft((current) => current + 1);
   }
 
@@ -2323,6 +2337,7 @@ export function App() {
         streak={streak}
         battlesLeft={battlesLeft}
         rewardClaimed={rewardClaimed}
+        rewardDate={rewardClaimDate || todayKey()}
         onClaim={claimStreakReward}
         onHome={goHome}
         onFind={startMatchmaking}
