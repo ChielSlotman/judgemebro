@@ -212,6 +212,8 @@ async function run() {
     await clickButton(page, "I am a streamer");
     await assertVisible(page, "Chat gets judged", "streamer dashboard");
     await clickButton(page, "Viewer link");
+    await assertVisible(page, "Viewer answers", "copy link stays on streamer dashboard");
+    await clickButton(page, "Preview viewer");
     await assertVisible(page, "Kai's room", "viewer room");
     await page.getByPlaceholder("Submit something stream-worthy...").fill(
       "No spark? I brought the lighter anyway.",

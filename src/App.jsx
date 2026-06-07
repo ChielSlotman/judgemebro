@@ -1187,7 +1187,6 @@ function StreamerScreen({ roomCode, category, scenario, roundIndex, setCategory,
     if (navigator.clipboard) {
       navigator.clipboard.writeText(link).catch(() => {});
     }
-    onViewer();
   }
 
   function hideAnswer(id) {
@@ -1240,6 +1239,10 @@ function StreamerScreen({ roomCode, category, scenario, roundIndex, setCategory,
           <button className="outline-button" type="button" onClick={copyViewerLink}>
             <Copy size={20} />
             {copied ? "Copied link" : "Viewer link"}
+          </button>
+          <button className="outline-button" type="button" onClick={onViewer}>
+            <Users size={20} />
+            Preview viewer
           </button>
           <button className="primary-button lime small" type="button" onClick={startNextRound}>
             Start round
