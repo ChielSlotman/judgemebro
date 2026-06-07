@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { bots, categories, scenarios } from "./data.js";
+import { getBotAnswer } from "./lib/botEngine.js";
 import {
   createFriendBattleRoom,
   createStreamerRoom,
@@ -2149,7 +2150,7 @@ export function App() {
       category: selectedCategory,
       prompt: options.room?.prompt ?? scenario.prompt,
       yourAnswer: options.yourAnswer ?? answer,
-      opponentAnswer: options.opponentAnswer ?? (battleMode === "bot" ? scenario.winningAnswer : scenario.opponentAnswer),
+      opponentAnswer: options.opponentAnswer ?? (battleMode === "bot" ? getBotAnswer(botName, scenario) : scenario.opponentAnswer),
       mode: battleMode,
       opponent: options.opponent ?? botName ?? "Juno",
     });

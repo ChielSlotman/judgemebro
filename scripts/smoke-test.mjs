@@ -215,6 +215,12 @@ async function run() {
     if (await visibleText(page, "Bot fallback ready")) {
       await clickButton(page, /Smooth Talker/);
       await assertVisible(page, "Smooth Talker", "selected bot opponent");
+      await page.getByPlaceholder("Type your answer...").fill(
+        "I would stay calm, name the issue, and make one clear next move without overreacting.",
+      );
+      await clickButton(page, "Submit to judge");
+      await assertVisible(page, "AI judge has spoken", "smooth talker bot verdict");
+      await assertVisible(page, "confident, light", "smooth talker personality answer");
     } else if (!(await visibleText(page, "Submit to judge"))) {
       await clickButton(page, "Start quick battle");
       await assertVisible(page, "Submit to judge", "ranked battle from live queue");
