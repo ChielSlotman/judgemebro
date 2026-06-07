@@ -32,6 +32,7 @@ import {
 } from "lucide-react";
 import { bots, categories, scenarios } from "./data.js";
 import { getBotAnswer } from "./lib/botEngine.js";
+import { DAILY_RANKED_BATTLES, resolveDailyBattlesLeft } from "./lib/dailyAllowance.js";
 import {
   createFriendBattleRoom,
   createStreamerRoom,
@@ -1575,7 +1576,12 @@ export function App() {
   const [answer, setAnswer] = useState("");
   const [rating, setRating] = useState(() => readStoredNumber("rating", 1128));
   const [streak, setStreak] = useState(() => readStoredNumber("streak", 3));
-  const [battlesLeft, setBattlesLeft] = useState(() => readStoredNumber("battles-left", 4));
+  const [battleAllowanceDate, setBattleAllowanceDate] = useState(() => readStoredJson("battles-left-date", todayKey()));
+  const [battlesLeft, setBattlesLeft] = useState(() => {
+    const storedDate = readStoredJson("battles-left-date", "");
+    const storedBattlesLeft = readStoredNumber("battles-left", DAILY_RANKED_BATTLES);
+    return resolveDailyBattlesLeft({ storedDate, storedBattlesLeft, today: todayKey() });
+  });
   const [rewardClaimDate, setRewardClaimDate] = useState(() => {
     const storedDate = readStoredJson("reward-claim-date", "");
     if (storedDate) return storedDate;
@@ -1626,7 +1632,8 @@ export function App() {
 
   useEffect(() => {
     writeStoredJson("battles-left", battlesLeft);
-  }, [battlesLeft]);
+    writeStoredJson("battles-left-date", battleAllowanceDate);
+  }, [battlesLeft, battleAllowanceDate]);
 
   useEffect(() => {
     writeStoredJson("reward-claim-date", rewardClaimDate);
@@ -1930,6 +1937,7 @@ export function App() {
   function claimStreakReward() {
     if (rewardClaimed) return;
     setRewardClaimDate(todayKey());
+    setBattleAllowanceDate(todayKey());
     setBattlesLeft((current) => current + 1);
   }
 
@@ -2093,7 +2101,14 @@ export function App() {
   }
 
   function startMatchmaking() {
+    if (battlesLeft <= 0) {
+      setAppPath("rewards");
+      setScreen("rewards");
+      return;
+    }
+
     resetPath();
+    setBattleAllowanceDate(todayKey());
     setScreen("matchmaking");
     setMatchElapsed(0);
     setBattleMode("ranked");
