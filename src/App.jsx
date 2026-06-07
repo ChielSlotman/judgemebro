@@ -377,7 +377,7 @@ function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, o
 
       <section className="stats-row">
         <div className="rank-stat">
-          <img src="/assets/rank-gold.png" alt="" />
+          <img src="/assets/rank-gold.svg" alt="" />
           <div>
             <strong>1128</strong>
             <span>Gold</span>
@@ -548,7 +548,7 @@ function BattleScreen({
             <span />
           </div>
           <div className="rating-line">
-            <img src="/assets/rank-gold.png" alt="" />
+            <img src="/assets/rank-gold.svg" alt="" />
             <strong>1128</strong>
             <span>Gold</span>
           </div>
@@ -565,7 +565,7 @@ function BattleScreen({
           <div className="rating-line right">
             <strong>{opponentRating}</strong>
             <span>Gold</span>
-            <img src="/assets/rank-gold.png" alt="" />
+            <img src="/assets/rank-gold.svg" alt="" />
           </div>
         </div>
       </section>
@@ -659,7 +659,7 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
         <span className="section-label">AI judge has spoken</span>
         <h1>{result.youWin ? "You win" : "You lose"}</h1>
         <div className="point-burst">
-          <img src="/assets/rank-gold.png" alt="" />
+          <img src="/assets/rank-gold.svg" alt="" />
           <strong>{delta}</strong>
           <span>{resultMeta}</span>
         </div>
@@ -777,7 +777,7 @@ function ProfileScreen({ onHome, onFind, onFriend, onStreamer }) {
         <img src="/assets/avatar-you.png" alt="Profile" />
         <h1>chiel</h1>
         <div className="profile-rating">
-          <img src="/assets/rank-gold.png" alt="" />
+          <img src="/assets/rank-gold.svg" alt="" />
           <strong>1128</strong>
           <span>Gold</span>
         </div>
@@ -1528,3 +1528,4 @@ export function App() {
     />
   );
 }
+
