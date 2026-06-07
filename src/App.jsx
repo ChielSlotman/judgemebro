@@ -823,12 +823,15 @@ function BattleScreen({
   timer,
   answer,
   setAnswer,
+  rating,
   onSubmit,
   onLeave,
   opponent = "Juno",
   opponentRating = "1135",
 }) {
   const { isListening, voiceStatus, toggleListening, voiceSupported } = useVoiceInput(setAnswer);
+  const rank = rankFromRating(rating);
+  const opponentRank = Number.isFinite(Number(opponentRating)) ? rankFromRating(Number(opponentRating)) : "Bot";
 
   return (
     <main className="screen battle-screen">
@@ -858,8 +861,8 @@ function BattleScreen({
           </div>
           <div className="rating-line">
             <img src="/assets/rank-gold.svg" alt="" />
-            <strong>1128</strong>
-            <span>Gold</span>
+            <strong>{rating}</strong>
+            <span>{rank}</span>
           </div>
         </div>
         <div className="versus">
@@ -873,7 +876,7 @@ function BattleScreen({
           </div>
           <div className="rating-line right">
             <strong>{opponentRating}</strong>
-            <span>Gold</span>
+            <span>{opponentRank}</span>
             <img src="/assets/rank-gold.svg" alt="" />
           </div>
         </div>
@@ -954,12 +957,13 @@ function WaitingScreen({ timer, category, onForceResult }) {
 function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
   const delta = result.points > 0 ? `+${result.points}` : `${result.points}`;
   const newRating = rating;
+  const rank = rankFromRating(newRating);
   const resultMeta =
     result.mode === "bot"
       ? "unranked bot battle"
       : result.mode === "streamer"
         ? "streamer battle"
-        : `new rating ${newRating} Gold`;
+        : `new rating ${newRating} ${rank}`;
 
   return (
     <main className="screen result-screen">
@@ -1054,14 +1058,14 @@ function FriendBattleScreen({ category, scenario, joined, roomCode, status, onHo
           <img src="/assets/avatar-you.png" alt="" />
           <div>
             <strong>You</strong>
-            <span>1128 Gold, ready</span>
+            <span>Ready</span>
           </div>
         </div>
         <div className={`slot ${joined ? "ready" : ""}`}>
           <img src="/assets/avatar-juno.png" alt="" />
           <div>
             <strong>{joined ? "Maya joined" : "Friend joining..."}</strong>
-            <span>{joined ? "1135 Gold, ready" : "Preview locked until both players enter"}</span>
+            <span>{joined ? "Ready" : "Preview locked until both players enter"}</span>
           </div>
         </div>
       </section>
@@ -2169,6 +2173,7 @@ export function App() {
         timer={timer}
         answer={answer}
         setAnswer={setAnswer}
+        rating={rating}
         onSubmit={submitAnswer}
         onLeave={goHome}
         opponent={botName ?? "Juno"}
