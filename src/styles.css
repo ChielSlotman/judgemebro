@@ -1747,10 +1747,10 @@ button:disabled {
 
 .profile-history article {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  min-height: 62px;
+  min-height: 78px;
   padding: 12px 14px;
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -1768,7 +1768,7 @@ button:disabled {
 .profile-history article div {
   display: grid;
   min-width: 0;
-  gap: 3px;
+  gap: 4px;
 }
 
 .profile-history article strong {
@@ -1784,6 +1784,18 @@ button:disabled {
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.profile-history article p {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.3;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .profile-history article b {

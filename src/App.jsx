@@ -228,6 +228,7 @@ function buildHistoryEntry(result) {
     opponent: result.opponent,
     youWin: result.youWin,
     points: result.points,
+    reason: result.reason,
     createdAt: new Date().toISOString(),
   };
 }
@@ -1210,8 +1211,9 @@ function ProfileScreen({
           recent.map((entry) => (
             <article key={entry.id} className={entry.youWin ? "win" : "loss"}>
               <div>
-                <strong>{entry.categoryName}</strong>
-                <span>{entry.mode} vs {entry.opponent}</span>
+                <strong>{entry.youWin ? "Won" : "Lost"} vs {entry.opponent}</strong>
+                <span>{entry.categoryName} · {entry.mode}</span>
+                <p>{entry.prompt || "Prompt details saved for future battles."}</p>
               </div>
               <b>{entry.points > 0 ? "+" : ""}{entry.points}</b>
             </article>
