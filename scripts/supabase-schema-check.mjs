@@ -26,6 +26,9 @@ const requiredRealtimeTables = [
   "streamer_rooms",
   "streamer_viewer_answers",
   "battle_results",
+  "ranked_matchmaking_tickets",
+  "ranked_battle_rooms",
+  "ranked_battle_answers",
 ];
 
 const failures = [];

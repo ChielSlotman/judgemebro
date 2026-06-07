@@ -1,7 +1,29 @@
 import { hasSupabaseConfig, supabase } from "./supabaseClient.js";
 
+const PRESENCE_STORAGE_KEY = "judgemebro:presence-id";
+
 function safePayload(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function randomId(prefix) {
+  const cryptoValue = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+  return `${prefix}-${cryptoValue}`.slice(0, 80);
+}
+
+function presenceId() {
+  if (typeof window === "undefined") return randomId("server");
+
+  const existing = window.localStorage.getItem(PRESENCE_STORAGE_KEY);
+  if (existing) return existing;
+
+  const next = randomId("player");
+  window.localStorage.setItem(PRESENCE_STORAGE_KEY, next);
+  return next;
+}
+
+export function getPlayerPresenceId() {
+  return presenceId();
 }
 
 async function currentUserId() {
@@ -56,6 +78,200 @@ export async function recordViewerSubmission({ roomCode, displayName, answer }) 
   }
 
   return { ok: true };
+}
+
+export async function findOrCreateRankedMatch({ category, prompt, playerName = "You" }) {
+  if (!hasSupabaseConfig || !supabase) return { skipped: true };
+
+  const playerPresenceId = presenceId();
+  const { data: ticket, error: ticketError } = await supabase
+    .from("ranked_matchmaking_tickets")
+    .insert({
+      category_id: category.id,
+      player_presence_id: playerPresenceId,
+      player_name: playerName,
+    })
+    .select()
+    .single();
+
+  if (ticketError) {
+    console.warn("Supabase matchmaking ticket insert failed", ticketError);
+    return { error: ticketError };
+  }
+
+  const { data: opponentTickets, error: searchError } = await supabase
+    .from("ranked_matchmaking_tickets")
+    .select("*")
+    .eq("category_id", category.id)
+    .eq("status", "waiting")
+    .neq("player_presence_id", playerPresenceId)
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  if (searchError) {
+    console.warn("Supabase matchmaking search failed", searchError);
+    return { ticket, playerPresenceId, error: searchError };
+  }
+
+  const opponentTicket = opponentTickets?.[0];
+  if (!opponentTicket) {
+    return { ticket, playerPresenceId, waiting: true };
+  }
+
+  const { data: room, error: roomError } = await supabase
+    .from("ranked_battle_rooms")
+    .insert({
+      category_id: category.id,
+      prompt,
+      host_ticket_id: opponentTicket.id,
+      guest_ticket_id: ticket.id,
+      host_presence_id: opponentTicket.player_presence_id,
+      guest_presence_id: playerPresenceId,
+      host_name: opponentTicket.player_name,
+      guest_name: playerName,
+    })
+    .select()
+    .single();
+
+  if (roomError) {
+    console.warn("Supabase ranked battle room insert failed", roomError);
+    return { ticket, playerPresenceId, error: roomError };
+  }
+
+  const { error: ticketUpdateError } = await supabase
+    .from("ranked_matchmaking_tickets")
+    .update({ status: "matched", battle_room_id: room.id })
+    .in("id", [opponentTicket.id, ticket.id]);
+
+  if (ticketUpdateError) {
+    console.warn("Supabase matchmaking ticket update failed", ticketUpdateError);
+    return { ticket, room, playerPresenceId, opponentTicket, error: ticketUpdateError };
+  }
+
+  return { ticket, room, playerPresenceId, opponentTicket, matched: true };
+}
+
+export async function submitRankedBattleAnswer({ room, answer }) {
+  if (!hasSupabaseConfig || !supabase || !room?.id) return { skipped: true };
+
+  const playerPresenceId = presenceId();
+  const isHost = playerPresenceId === room.host_presence_id;
+  const { error: answerError } = await supabase.from("ranked_battle_answers").insert({
+    room_id: room.id,
+    player_presence_id: playerPresenceId,
+    answer,
+  });
+
+  if (answerError) {
+    console.warn("Supabase ranked answer insert failed", answerError);
+    return { error: answerError };
+  }
+
+  const { error: roomError } = await supabase
+    .from("ranked_battle_rooms")
+    .update({
+      host_submitted: isHost ? true : room.host_submitted,
+      guest_submitted: isHost ? room.guest_submitted : true,
+      status: "judging",
+    })
+    .eq("id", room.id);
+
+  if (roomError) {
+    console.warn("Supabase ranked room submission update failed", roomError);
+    return { error: roomError };
+  }
+
+  return { ok: true };
+}
+
+export async function markRankedBattleJudged({ roomId, winnerPresenceId, reason, pointDelta = 18 }) {
+  if (!hasSupabaseConfig || !supabase || !roomId) return { skipped: true };
+
+  const { error } = await supabase
+    .from("ranked_battle_rooms")
+    .update({
+      status: "judged",
+      ai_winner_presence_id: winnerPresenceId,
+      ai_reason: reason,
+      point_delta: pointDelta,
+    })
+    .eq("id", roomId);
+
+  if (error) {
+    console.warn("Supabase ranked verdict update failed", error);
+    return { error };
+  }
+
+  return { ok: true };
+}
+
+export async function getRankedBattleRoom(roomId) {
+  if (!hasSupabaseConfig || !supabase || !roomId) return { skipped: true };
+
+  const { data, error } = await supabase
+    .from("ranked_battle_rooms")
+    .select("*")
+    .eq("id", roomId)
+    .single();
+
+  if (error) {
+    console.warn("Supabase ranked room lookup failed", error);
+    return { error };
+  }
+
+  return { room: data };
+}
+
+export function subscribeToRankedTicket(ticketId, onChange) {
+  if (!hasSupabaseConfig || !supabase || !ticketId) return { skipped: true, unsubscribe: () => {} };
+
+  const channel = supabase
+    .channel(`ranked-ticket:${ticketId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "UPDATE",
+        schema: "public",
+        table: "ranked_matchmaking_tickets",
+        filter: `id=eq.${ticketId}`,
+      },
+      onChange,
+    )
+    .subscribe();
+
+  return {
+    skipped: false,
+    channel,
+    unsubscribe: () => {
+      supabase.removeChannel(channel);
+    },
+  };
+}
+
+export function subscribeToRankedBattle(roomId, onChange) {
+  if (!hasSupabaseConfig || !supabase || !roomId) return { skipped: true, unsubscribe: () => {} };
+
+  const channel = supabase
+    .channel(`ranked-battle:${roomId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "ranked_battle_rooms",
+        filter: `id=eq.${roomId}`,
+      },
+      onChange,
+    )
+    .subscribe();
+
+  return {
+    skipped: false,
+    channel,
+    unsubscribe: () => {
+      supabase.removeChannel(channel);
+    },
+  };
 }
 
 export function subscribeToStreamerAnswers(roomCode, onChange) {

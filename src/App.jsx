@@ -28,7 +28,16 @@ import {
   X,
 } from "lucide-react";
 import { bots, categories, scenarios, viewerAnswers as seedViewerAnswers } from "./data.js";
-import { recordBattleResult, recordViewerSubmission } from "./lib/gameRepository.js";
+import {
+  findOrCreateRankedMatch,
+  getPlayerPresenceId,
+  getRankedBattleRoom,
+  markRankedBattleJudged,
+  recordBattleResult,
+  recordViewerSubmission,
+  submitRankedBattleAnswer,
+  subscribeToRankedTicket,
+} from "./lib/gameRepository.js";
 import { requestJudgeVerdict } from "./lib/judgeClient.js";
 
 const iconMap = {
@@ -235,7 +244,7 @@ function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, o
   );
 }
 
-function MatchmakingScreen({ category, elapsed, botReady, onCancel, onBattle, onBot, onFriend }) {
+function MatchmakingScreen({ category, elapsed, botReady, matchmakingStatus, onCancel, onBattle, onBot, onFriend }) {
   return (
     <main className="screen matchmaking-screen">
       <BrandHeader onHome={onCancel} onLeave={onCancel} compact />
@@ -257,6 +266,7 @@ function MatchmakingScreen({ category, elapsed, botReady, onCancel, onBattle, on
           <span />
           <strong>{elapsed}s searching</strong>
         </div>
+        <p className="matchmaking-status">{matchmakingStatus}</p>
       </section>
 
       <section className="rule-list">
@@ -713,6 +723,9 @@ export function App() {
   const [friendJoined, setFriendJoined] = useState(initialInvite?.screen === "friend");
   const [battleMode, setBattleMode] = useState(initialInvite?.screen === "friend" ? "friend" : "ranked");
   const [botName, setBotName] = useState(null);
+  const [matchmakingStatus, setMatchmakingStatus] = useState("Opening real-player queue...");
+  const [rankedRoom, setRankedRoom] = useState(null);
+  const [rankedPresenceId, setRankedPresenceId] = useState(null);
   const isJudgingRef = useRef(false);
 
   const botReady = matchElapsed >= 5;
@@ -722,6 +735,68 @@ export function App() {
     const interval = window.setInterval(() => setMatchElapsed((value) => value + 1), 1000);
     return () => window.clearInterval(interval);
   }, [screen]);
+
+  useEffect(() => {
+    if (screen !== "matchmaking" || battleMode !== "ranked") return undefined;
+
+    let cancelled = false;
+    let subscription = { unsubscribe: () => {} };
+    const scenario = getScenario(selectedCategory.id);
+
+    findOrCreateRankedMatch({
+      category: selectedCategory,
+      prompt: scenario.prompt,
+      playerName: "You",
+    })
+      .then((match) => {
+        if (cancelled) return;
+
+        if (match.skipped) {
+          setMatchmakingStatus("Real queue waits for Supabase env. Prototype opponent is ready.");
+          return;
+        }
+
+        if (match.error) {
+          setMatchmakingStatus("Real queue had an issue. Prototype opponent is ready.");
+          return;
+        }
+
+        if (match.matched && match.room) {
+          const opponentName =
+            match.room.host_presence_id === match.playerPresenceId ? match.room.guest_name : match.room.host_name;
+          setRankedRoom(match.room);
+          setRankedPresenceId(match.playerPresenceId);
+          setMatchmakingStatus("Real player matched. Starting battle...");
+          window.setTimeout(() => startBattle("ranked", opponentName), 450);
+          return;
+        }
+
+        setMatchmakingStatus("Real Supabase queue open. Waiting for another player...");
+        subscription = subscribeToRankedTicket(match.ticket?.id, async (payload) => {
+          const roomId = payload.new?.battle_room_id;
+          if (!roomId) return;
+
+          const nextRoom = await getRankedBattleRoom(roomId);
+          if (cancelled || !nextRoom.room) return;
+
+          setRankedRoom(nextRoom.room);
+          setRankedPresenceId(match.playerPresenceId);
+          setMatchmakingStatus("Real player matched. Starting battle...");
+          const opponentName =
+            nextRoom.room.host_presence_id === match.playerPresenceId ? nextRoom.room.guest_name : nextRoom.room.host_name;
+          window.setTimeout(() => startBattle("ranked", opponentName), 450);
+        });
+      })
+      .catch((error) => {
+        console.warn("Ranked matchmaking failed", error);
+        if (!cancelled) setMatchmakingStatus("Real queue had an issue. Prototype opponent is ready.");
+      });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [screen, battleMode, selectedCategory]);
 
   useEffect(() => {
     if (!["battle", "waiting"].includes(screen)) return undefined;
@@ -748,6 +823,8 @@ export function App() {
     setTimer(24);
     setMatchElapsed(0);
     setFriendJoined(false);
+    setRankedRoom(null);
+    setRankedPresenceId(null);
     isJudgingRef.current = false;
   }
 
@@ -756,6 +833,9 @@ export function App() {
     setMatchElapsed(0);
     setBattleMode("ranked");
     setBotName(null);
+    setRankedRoom(null);
+    setRankedPresenceId(getPlayerPresenceId());
+    setMatchmakingStatus("Opening real-player queue...");
   }
 
   function startBattle(mode = "ranked", nextBotName = null) {
@@ -768,6 +848,11 @@ export function App() {
 
   function submitAnswer() {
     if (answer.trim().length === 0) return;
+    if (rankedRoom) {
+      submitRankedBattleAnswer({ room: rankedRoom, answer }).catch((error) => {
+        console.warn("Ranked answer submit failed", error);
+      });
+    }
     setScreen("waiting");
     window.setTimeout(() => finishRound(), 1600);
   }
@@ -788,6 +873,20 @@ export function App() {
     recordBattleResult(nextResult).catch((error) => {
       console.warn("Battle result persistence failed", error);
     });
+    if (rankedRoom) {
+      const localPresenceId = rankedPresenceId ?? getPlayerPresenceId();
+      const opponentPresenceId =
+        rankedRoom.host_presence_id === localPresenceId ? rankedRoom.guest_presence_id : rankedRoom.host_presence_id;
+      const winnerPresenceId = nextResult.youWin ? localPresenceId : opponentPresenceId;
+      markRankedBattleJudged({
+        roomId: rankedRoom.id,
+        winnerPresenceId,
+        reason: nextResult.reason,
+        pointDelta: nextResult.points,
+      }).catch((error) => {
+        console.warn("Ranked verdict persistence failed", error);
+      });
+    }
     setRating((current) => current + nextResult.points);
     isJudgingRef.current = false;
     setScreen("result");
@@ -832,6 +931,7 @@ export function App() {
         category={selectedCategory}
         elapsed={matchElapsed}
         botReady={botReady}
+        matchmakingStatus={matchmakingStatus}
         onCancel={goHome}
         onBattle={() => startBattle("ranked")}
         onBot={() => startBattle("bot", rankedBots[0].name)}
