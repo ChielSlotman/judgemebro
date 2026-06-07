@@ -71,6 +71,16 @@ npm run setup:check
 
 `test:supabase` statically verifies the local migrations for the prototype security and Realtime invariants. `setup:check` reports whether Git remotes, Vercel CLI/linking, GitHub CLI, Supabase CLI, and Supabase env vars are present.
 
+## GitHub Migration Workflow
+
+After the GitHub repository exists, add these repository secrets:
+
+- `SUPABASE_ACCESS_TOKEN`
+- `SUPABASE_DB_PASSWORD`
+- `SUPABASE_PROJECT_REF`
+
+Then run the manual `Supabase Migrations` workflow. Keep `apply` as `false` for the first run so GitHub Actions performs `supabase db push --dry-run`. Re-run with `apply` set to `true` only after the dry run shows the expected migration list.
+
 ## Prototype Tables
 
 - `profiles`

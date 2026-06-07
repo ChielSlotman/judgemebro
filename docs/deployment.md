@@ -44,6 +44,28 @@ npm run test:smoke
 
 It uses pinned `npx vercel@54.9.1`, so a global Vercel CLI install is not required in CI.
 
+## GitHub Supabase Migration Workflow
+
+`.github/workflows/supabase-migrations.yml` is a manual workflow for remote database migrations. It always runs:
+
+```bash
+npm ci
+npm run test:supabase
+supabase link --project-ref "$SUPABASE_PROJECT_REF"
+supabase db push --dry-run
+```
+
+It only applies migrations when the workflow input `apply` is set to `true`.
+
+Required GitHub repository secrets:
+
+- `SUPABASE_ACCESS_TOKEN`
+- `SUPABASE_DB_PASSWORD`
+- `SUPABASE_PROJECT_REF`
+
+The workflow uses `concurrency` so production migration pushes do not overlap.
+It installs the Supabase CLI through `supabase/setup-cli@v2`.
+
 ## Judge API
 
 Vercel deploys `api/judge.js` as a serverless function. The client calls `/api/judge` first and falls back to the local deterministic judge engine when running in plain Vite preview or when the API is unavailable.

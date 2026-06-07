@@ -1,0 +1,56 @@
+name: Supabase Migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Apply migrations after the dry run
+        required: true
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+
+concurrency:
+  group: supabase-migrations-production
+  cancel-in-progress: false
+
+jobs:
+  migrations:
+    runs-on: ubuntu-latest
+
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v2
+        with:
+          version: latest
+
+      - name: Static schema safety check
+        run: |
+          npm ci
+          npm run test:supabase
+
+      - name: Link Supabase project
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+
+      - name: Preview migration push
+        run: supabase db push --dry-run
+
+      - name: Apply migration push
+        if: ${{ inputs.apply == 'true' }}
+        run: supabase db push
