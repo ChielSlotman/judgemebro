@@ -151,6 +151,11 @@ async function run() {
     await page.waitForTimeout(2_200);
     await assertVisible(page, "AI judge has spoken", "verdict");
     await assertVisible(page, "You win", "win state");
+    await page.goto(baseUrl, { waitUntil: "load" });
+    await clickButton(page, "Open profile");
+    await assertVisible(page, "1W / 0L", "profile win/loss updated");
+    await assertVisible(page, "Recent battles", "profile history");
+    await assertVisible(page, "Social Drama", "profile history category");
 
     await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "Challenge friend");

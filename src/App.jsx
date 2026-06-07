@@ -161,6 +161,40 @@ function writeStoredJson(key, value) {
   window.localStorage.setItem(`${STORAGE_PREFIX}${key}`, JSON.stringify(value));
 }
 
+function rankFromRating(rating) {
+  if (rating >= 1800) return "Master";
+  if (rating >= 1500) return "Diamond";
+  if (rating >= 1300) return "Platinum";
+  if (rating >= 1100) return "Gold";
+  if (rating >= 900) return "Silver";
+  return "Bronze";
+}
+
+function initialCategoryRatings() {
+  return Object.fromEntries(categories.map((category) => [category.id, 1000]));
+}
+
+function categoryRatingRows(categoryRatings) {
+  return categories.map((category) => ({
+    ...category,
+    rating: categoryRatings[category.id] ?? 1000,
+  }));
+}
+
+function buildHistoryEntry(result) {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    mode: result.mode,
+    categoryId: result.category.id,
+    categoryName: result.category.name,
+    prompt: result.prompt,
+    opponent: result.opponent,
+    youWin: result.youWin,
+    points: result.points,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 function pickCommentatorVoice() {
   if (typeof window === "undefined" || !window.speechSynthesis) return null;
 
@@ -972,7 +1006,27 @@ function FriendBattleScreen({ category, scenario, joined, roomCode, status, onHo
   );
 }
 
-function ProfileScreen({ user, rating, streak, onHome, onFind, onFriend, onStreamer, onAccount, onLegal }) {
+function ProfileScreen({
+  user,
+  rating,
+  streak,
+  history,
+  categoryRatings,
+  onHome,
+  onFind,
+  onFriend,
+  onStreamer,
+  onAccount,
+  onLegal,
+}) {
+  const wins = history.filter((entry) => entry.youWin).length;
+  const losses = history.length - wins;
+  const rows = categoryRatingRows(categoryRatings);
+  const bestCategory = history.length ? rows.reduce((best, row) => (row.rating > best.rating ? row : best), rows[0]) : null;
+  const rank = rankFromRating(rating);
+  const progress = Math.min(100, Math.max(8, ((rating - 900) / 400) * 100));
+  const recent = history.slice(0, 4);
+
   return (
     <main className="screen profile-screen">
       <BrandHeader onHome={onHome} onLeave={onHome} compact />
@@ -982,18 +1036,42 @@ function ProfileScreen({ user, rating, streak, onHome, onFind, onFriend, onStrea
         <div className="profile-rating">
           <img src="/assets/rank-gold.svg" alt="" />
           <strong>{rating}</strong>
-          <span>Gold</span>
+          <span>{rank}</span>
         </div>
-        <div className="rank-progress"><span /></div>
-        <p>12W / 7L. {streak}-day streak. Best category: Negotiation.</p>
+        <div className="rank-progress"><span style={{ width: `${progress}%` }} /></div>
+        <p>{wins}W / {losses}L. {streak}-day streak. Best category: {bestCategory?.name || "Unranked"}.</p>
+        <div className="profile-kpis">
+          <span><strong>{history.length}</strong> Battles</span>
+          <span><strong>{wins}</strong> Wins</span>
+          <span><strong>{bestCategory?.rating ?? 1000}</strong> Best</span>
+        </div>
       </section>
       <section className="category-ratings">
-        {categories.map((category, index) => (
+        {rows.map((category) => (
           <div key={category.id}>
             <span>{category.name}</span>
-            <strong>{[1184, 1042, 970, 1210, 1105, 997, 1132][index]}</strong>
+            <strong>{category.rating}</strong>
           </div>
         ))}
+      </section>
+      <section className="profile-history">
+        <div className="profile-section-title">
+          <span>Recent battles</span>
+          <strong>{history.length ? "Live stats" : "No battles yet"}</strong>
+        </div>
+        {recent.length ? (
+          recent.map((entry) => (
+            <article key={entry.id} className={entry.youWin ? "win" : "loss"}>
+              <div>
+                <strong>{entry.categoryName}</strong>
+                <span>{entry.mode} vs {entry.opponent}</span>
+              </div>
+              <b>{entry.points > 0 ? "+" : ""}{entry.points}</b>
+            </article>
+          ))
+        ) : (
+          <p className="empty-history">Play one round and your record starts here.</p>
+        )}
       </section>
       <section className="cta-stack">
         <button className="primary-button lime" type="button" onClick={onFind}>Find opponent</button>
@@ -1290,6 +1368,10 @@ export function App() {
   const [streak, setStreak] = useState(() => readStoredNumber("streak", 3));
   const [battlesLeft, setBattlesLeft] = useState(() => readStoredNumber("battles-left", 4));
   const [rewardClaimed, setRewardClaimed] = useState(() => readStoredJson("reward-claimed", false));
+  const [battleHistory, setBattleHistory] = useState(() => readStoredJson("battle-history", []));
+  const [categoryRatings, setCategoryRatings] = useState(() =>
+    readStoredJson("category-ratings", initialCategoryRatings()),
+  );
   const [user, setUser] = useState(() => readStoredJson("user", null));
   const [authStatus, setAuthStatus] = useState("Google sign-in is ready when Supabase Auth is configured.");
   const [legalType, setLegalType] = useState("terms");
@@ -1331,6 +1413,14 @@ export function App() {
   useEffect(() => {
     writeStoredJson("reward-claimed", rewardClaimed);
   }, [rewardClaimed]);
+
+  useEffect(() => {
+    writeStoredJson("battle-history", battleHistory);
+  }, [battleHistory]);
+
+  useEffect(() => {
+    writeStoredJson("category-ratings", categoryRatings);
+  }, [categoryRatings]);
 
   useEffect(() => {
     if (!supabase) return undefined;
@@ -1679,6 +1769,14 @@ export function App() {
       });
     }
     setRating((current) => current + nextResult.points);
+    setCategoryRatings((current) => ({
+      ...current,
+      [nextResult.category.id]: Math.max(
+        0,
+        (current[nextResult.category.id] ?? 1000) + (nextResult.youWin ? 16 : -14),
+      ),
+    }));
+    setBattleHistory((current) => [buildHistoryEntry(nextResult), ...current].slice(0, 20));
     setBattlesLeft((current) => Math.max(0, current - (nextResult.mode === "bot" ? 0 : 1)));
     setStreak((current) => Math.max(current, 3));
     setScenarioRound((current) => (current + 1) % getScenarioCount(selectedCategory.id));
@@ -1958,6 +2056,8 @@ export function App() {
         user={user}
         rating={rating}
         streak={streak}
+        history={battleHistory}
+        categoryRatings={categoryRatings}
         onHome={goHome}
         onFind={startMatchmaking}
         onFriend={startFriend}
