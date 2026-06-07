@@ -53,6 +53,14 @@ npx vercel env add VITE_SUPABASE_PUBLISHABLE_KEY preview development
 npx vercel deploy
 ```
 
+After `.env.local` contains Supabase client values, sync them to Vercel without exposing the service-role key:
+
+```bash
+npm run sync:vercel-env -- --dry-run
+npm run sync:vercel-env
+npm run check:providers
+```
+
 For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes create preview deployments. Production should deploy from `main`.
 GitHub remote and repository secret setup is tracked in `docs/github.md`.
 

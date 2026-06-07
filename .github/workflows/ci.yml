@@ -38,6 +38,9 @@ jobs:
       - name: Docs contract check
         run: npm run test:docs
 
+      - name: Vercel env sync dry run
+        run: npm run test:vercel-env-sync
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 

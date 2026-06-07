@@ -12,9 +12,11 @@
     "test:workflows": "node scripts/workflow-check.mjs",
     "test:deployment": "node scripts/deployment-check.mjs",
     "test:docs": "node scripts/docs-check.mjs",
+    "test:vercel-env-sync": "node scripts/sync-vercel-env.mjs --dry-run --env-file scripts/fixtures/supabase-client.env",
     "test:smoke": "node scripts/smoke-test.mjs",
     "check:providers": "node scripts/provider-readiness-check.mjs",
     "launch:audit": "node scripts/launch-audit.mjs",
+    "sync:vercel-env": "node scripts/sync-vercel-env.mjs",
     "setup:check": "node scripts/setup-check.mjs"
   },
   "dependencies": {

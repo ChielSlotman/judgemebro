@@ -13,6 +13,15 @@ VITE_SUPABASE_PUBLISHABLE_KEY=...
 
 Do not expose `SUPABASE_SERVICE_ROLE_KEY` to client-side code.
 
+After `.env.local` is filled, sync the public Supabase client values to Vercel:
+
+```bash
+npm run sync:vercel-env -- --dry-run
+npm run sync:vercel-env
+```
+
+The sync script only sends `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. It ignores `SUPABASE_SERVICE_ROLE_KEY`.
+
 ## Schema
 
 The initial schema is in:

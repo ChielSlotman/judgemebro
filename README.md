@@ -42,10 +42,11 @@ npm run test:supabase
 npm run test:workflows
 npm run test:deployment
 npm run test:docs
+npm run test:vercel-env-sync
 npm run test:smoke
 ```
 
-The judge test validates the Vercel API contract. The Supabase test statically checks that public tables have RLS and policies, that Realtime tables are published, and that the service-role key is not referenced by client source. The workflow test checks the GitHub CI, Vercel deploy, and Supabase migration workflow contracts. The deployment test checks the live Vercel app, live judge API, and reports custom-domain DNS status. The docs test checks that provider handoff docs are present and linked. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
+The judge test validates the Vercel API contract. The Supabase test statically checks that public tables have RLS and policies, that Realtime tables are published, and that the service-role key is not referenced by client source. The workflow test checks the GitHub CI, Vercel deploy, and Supabase migration workflow contracts. The deployment test checks the live Vercel app, live judge API, and reports custom-domain DNS status. The docs test checks that provider handoff docs are present and linked. The Vercel env sync test dry-runs the Supabase client env sync and confirms the service-role key is ignored. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
 
 ## Setup Check
 
@@ -63,6 +64,15 @@ npm run launch:audit
 ```
 
 This command exits non-zero until the GitHub remote, Vercel deployment, custom-domain DNS, local/Vercel Supabase env vars, and Supabase auth are all complete.
+
+## Vercel Env Sync
+
+```bash
+npm run sync:vercel-env -- --dry-run
+npm run sync:vercel-env
+```
+
+Use this after `.env.local` contains `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY`. The sync script never sends `SUPABASE_SERVICE_ROLE_KEY`.
 
 ## Setup Docs
 
