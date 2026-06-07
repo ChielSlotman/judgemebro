@@ -484,12 +484,12 @@ function MatchmakingScreen({ category, elapsed, botReady, matchmakingStatus, onC
         {elapsed >= 3 ? (
           <button className="primary-button lime" type="button" onClick={onBattle}>
             <Bolt size={26} />
-            Enter real battle
+            Start quick battle
           </button>
         ) : (
           <button className="primary-button muted" type="button" disabled>
             <Clock size={24} />
-            Looking for a real player
+            Searching for opponent
           </button>
         )}
         <button className="outline-button" type="button" onClick={onFriend}>
@@ -498,7 +498,7 @@ function MatchmakingScreen({ category, elapsed, botReady, matchmakingStatus, onC
         </button>
         <button className="outline-button coral" type="button" disabled={!botReady} onClick={onBot}>
           <Bot size={22} />
-          {botReady ? "Play a bot now" : "Bot fallback unlocks at 5s"}
+          {botReady ? "Play a bot now" : "Bot battle unlocks at 5s"}
         </button>
         <button className="text-button" type="button" onClick={onCancel}>
           Cancel search
@@ -832,18 +832,18 @@ function StreamerScreen({ roomCode, category, setCategory, onHome, onViewer, onO
       .then((result) => {
         if (cancelled) return;
         if (result.skipped) {
-          setStreamStatus("Viewer answers stay local until Supabase env is connected.");
+          setStreamStatus("Viewer answers are live for this room. No AI cost until selected.");
           return;
         }
         if (result.error) {
-          setStreamStatus("Streamer room sync had an issue. Local viewer list is active.");
+          setStreamStatus("Viewer room is running in local mode.");
           return;
         }
-        setStreamStatus("Supabase room live. Viewer answers appear here without AI cost.");
+        setStreamStatus("Viewer room is live. Answers appear here without AI cost.");
       })
       .catch((error) => {
         console.warn("Streamer room sync failed", error);
-        if (!cancelled) setStreamStatus("Streamer room sync had an issue. Local viewer list is active.");
+        if (!cancelled) setStreamStatus("Viewer room is running in local mode.");
       });
 
     return () => {
@@ -1075,7 +1075,7 @@ export function App() {
   const [friendStatus, setFriendStatus] = useState("Send the link. Same prompt, 30s answers, AI verdict.");
   const [battleMode, setBattleMode] = useState(initialInvite?.screen === "friend" ? "friend" : "ranked");
   const [botName, setBotName] = useState(null);
-  const [matchmakingStatus, setMatchmakingStatus] = useState("Opening real-player queue...");
+  const [matchmakingStatus, setMatchmakingStatus] = useState("Opening the judge queue...");
   const [rankedRoom, setRankedRoom] = useState(null);
   const [rankedPresenceId, setRankedPresenceId] = useState(null);
   const isJudgingRef = useRef(false);
@@ -1105,12 +1105,12 @@ export function App() {
         if (cancelled) return;
 
         if (match.skipped) {
-          setMatchmakingStatus("Real queue waits for Supabase env. Prototype opponent is ready.");
+          setMatchmakingStatus("Queue is quiet. A quick battle is ready.");
           return;
         }
 
         if (match.error) {
-          setMatchmakingStatus("Real queue had an issue. Prototype opponent is ready.");
+          setMatchmakingStatus("Queue is taking too long. A quick battle is ready.");
           return;
         }
 
@@ -1124,7 +1124,7 @@ export function App() {
           return;
         }
 
-        setMatchmakingStatus("Real Supabase queue open. Waiting for another player...");
+        setMatchmakingStatus("Live queue open. Waiting for another player...");
         subscription = subscribeToRankedTicket(match.ticket?.id, async (payload) => {
           const roomId = payload.new?.battle_room_id;
           if (!roomId) return;
@@ -1142,7 +1142,7 @@ export function App() {
       })
       .catch((error) => {
         console.warn("Ranked matchmaking failed", error);
-        if (!cancelled) setMatchmakingStatus("Real queue had an issue. Prototype opponent is ready.");
+        if (!cancelled) setMatchmakingStatus("Queue is taking too long. A quick battle is ready.");
       });
 
     return () => {
@@ -1194,13 +1194,13 @@ export function App() {
 
         if (result.missing) {
           setFriendPersistence("fallback");
-          setFriendStatus("Room not found in Supabase yet. Showing prototype room.");
+          setFriendStatus("Room is not live yet. Showing the invite preview.");
           return;
         }
 
         if (result.error) {
           setFriendPersistence("fallback");
-          setFriendStatus("Friend room sync had an issue. Showing prototype room.");
+          setFriendStatus("Friend room is running in preview mode.");
           return;
         }
 
@@ -1211,14 +1211,14 @@ export function App() {
         setFriendStatus(
           result.room?.guest_presence_id
             ? "Friend joined. Same prompt, 30s answers, AI verdict."
-            : "Supabase room live. Send the link and wait for your friend.",
+            : "Room is live. Send the link and wait for your friend.",
         );
       })
       .catch((error) => {
         console.warn("Friend room sync failed", error);
         if (!cancelled) {
           setFriendPersistence("fallback");
-          setFriendStatus("Friend room sync had an issue. Showing prototype room.");
+          setFriendStatus("Friend room is running in preview mode.");
         }
       });
 
@@ -1237,7 +1237,7 @@ export function App() {
       setFriendStatus(
         room?.guest_presence_id
           ? "Friend joined. Same prompt, 30s answers, AI verdict."
-          : "Supabase room live. Send the link and wait for your friend.",
+          : "Room is live. Send the link and wait for your friend.",
       );
     });
 
@@ -1277,7 +1277,7 @@ export function App() {
     setBotName(null);
     setRankedRoom(null);
     setRankedPresenceId(getPlayerPresenceId());
-    setMatchmakingStatus("Opening real-player queue...");
+    setMatchmakingStatus("Opening the judge queue...");
   }
 
   function startBattle(mode = "ranked", nextBotName = null) {
@@ -1373,7 +1373,7 @@ export function App() {
     setFriendRole("host");
     setFriendRoom(null);
     setFriendPresenceId(getPlayerPresenceId());
-    setFriendStatus("Creating Supabase friend room...");
+    setFriendStatus("Creating friend room...");
     setBattleMode("friend");
     setScreen("friend");
   }

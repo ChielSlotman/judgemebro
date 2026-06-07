@@ -125,8 +125,8 @@ async function run() {
 
     await clickButton(page, "Find opponent");
     await page.waitForTimeout(5_300);
-    if (await visibleText(page, "Enter real battle")) {
-      await clickButton(page, "Enter real battle");
+    if (await visibleText(page, "Start quick battle")) {
+      await clickButton(page, "Start quick battle");
     }
     await assertVisible(page, "Submit to judge", "battle submit");
     await page.getByPlaceholder("Type your answer...").fill(
@@ -147,7 +147,7 @@ async function run() {
       "friend lobby state",
     );
     if (friendLobbyState !== "Maya joined") {
-      await assertVisible(page, "Supabase room live", "real friend room waiting state");
+      await assertVisible(page, "Room is live", "friend room waiting state");
     }
     await startFriendBattleOrBot(page);
 
@@ -167,7 +167,7 @@ async function run() {
       await clickButton(page, "Play a bot now");
       await assertVisible(page, "Cold CEO", "bot opponent");
     } else if (!(await visibleText(page, "Submit to judge"))) {
-      await clickButton(page, "Enter real battle");
+      await clickButton(page, "Start quick battle");
       await assertVisible(page, "Submit to judge", "ranked battle from live queue");
     }
 
