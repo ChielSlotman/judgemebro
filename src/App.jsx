@@ -125,45 +125,6 @@ function resetPath() {
   window.history.replaceState({}, "", "/");
 }
 
-function pickCommentatorVoice() {
-  if (typeof window === "undefined" || !window.speechSynthesis) return null;
-
-  const voices = window.speechSynthesis.getVoices();
-  const englishVoices = voices.filter((voice) => voice.lang.toLowerCase().startsWith("en"));
-  const premiumHints = [
-    /natural/i,
-    /neural/i,
-    /enhanced/i,
-    /premium/i,
-    /online/i,
-    /guy/i,
-    /ryan/i,
-    /liam/i,
-    /brian/i,
-    /aaron/i,
-  ];
-  const maleVoiceHints = [
-    /\bdavid\b/i,
-    /\bdaniel\b/i,
-    /\balex\b/i,
-    /\bfred\b/i,
-    /\bmark\b/i,
-    /\bpaul\b/i,
-    /\bmale\b/i,
-  ];
-
-  const score = (voice) => {
-    const name = voice.name || "";
-    const premium = premiumHints.some((pattern) => pattern.test(name)) ? 35 : 0;
-    const hinted = maleVoiceHints.some((pattern) => pattern.test(name)) ? 20 : 0;
-    const englishUs = voice.lang.toLowerCase().startsWith("en-us") ? 2 : 0;
-    const localPenalty = voice.localService ? 0 : 4;
-    return premium + hinted + englishUs + localPenalty + (voice.default ? 1 : 0);
-  };
-
-  return [...(englishVoices.length ? englishVoices : voices)].sort((a, b) => score(b) - score(a))[0] ?? null;
-}
-
 function speakVerdict(result) {
   if (typeof window === "undefined" || !result) return;
 
@@ -172,9 +133,7 @@ function speakVerdict(result) {
   const points = result.mode === "bot" ? "Unranked bot battle." : `${result.points > 0 ? "Plus" : "Minus"} ${Math.abs(result.points)} points.`;
   const narration = `${verdict} ${points} ${result.reason}`;
 
-  playHostedVerdict(narration).catch(() => {
-    speakBrowserVerdict(narration);
-  });
+  playHostedVerdict(narration).catch(() => {});
 }
 
 async function playHostedVerdict(narration) {
@@ -199,19 +158,6 @@ async function playHostedVerdict(narration) {
   audio.onended = () => URL.revokeObjectURL(audioUrl);
   audio.onerror = () => URL.revokeObjectURL(audioUrl);
   await audio.play();
-}
-
-function speakBrowserVerdict(narration) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-  const utterance = new SpeechSynthesisUtterance(narration);
-  const voice = pickCommentatorVoice();
-  if (voice) utterance.voice = voice;
-  utterance.lang = voice?.lang || "en-US";
-  utterance.rate = 0.93;
-  utterance.pitch = 0.68;
-  utterance.volume = 1;
-  window.speechSynthesis.speak(utterance);
 }
 
 function appendVoiceAnswer(current, spokenText) {
