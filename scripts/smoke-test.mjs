@@ -208,9 +208,9 @@ async function run() {
     await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "Find opponent");
     await page.waitForTimeout(5_300);
-    if (await visibleText(page, "Play a bot now")) {
-      await clickButton(page, "Play a bot now");
-      await assertVisible(page, "Cold CEO", "bot opponent");
+    if (await visibleText(page, "Bot fallback ready")) {
+      await clickButton(page, /Smooth Talker/);
+      await assertVisible(page, "Smooth Talker", "selected bot opponent");
     } else if (!(await visibleText(page, "Submit to judge"))) {
       await clickButton(page, "Start quick battle");
       await assertVisible(page, "Submit to judge", "ranked battle from live queue");

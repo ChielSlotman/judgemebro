@@ -99,6 +99,20 @@ function randomScenarioRound(categoryId, previousRound = -1) {
   return nextIndex;
 }
 
+function recommendedBotsForCategory(categoryId) {
+  const namesByCategory = {
+    business: ["Cold CEO", "Chaos Carl", "The Monk"],
+    negotiation: ["Cold CEO", "Smooth Talker", "Chaos Carl"],
+    dating: ["Smooth Talker", "The Monk", "Chaos Carl"],
+    social: ["Smooth Talker", "The Monk", "Chaos Carl"],
+    moral: ["The Monk", "Cold CEO", "Chaos Carl"],
+    survival: ["The Survivalist", "Cold CEO", "Chaos Carl"],
+    crisis: ["The Survivalist", "Cold CEO", "The Monk"],
+  };
+  const names = namesByCategory[categoryId] ?? ["Cold CEO", "Chaos Carl", "The Monk"];
+  return names.map((name) => bots.find((bot) => bot.name === name)).filter(Boolean);
+}
+
 function inviteBaseUrl() {
   if (typeof window === "undefined") return "https://judgemebro.com";
   return window.location.origin;
@@ -757,7 +771,17 @@ function LegalScreen({ type, onHome }) {
   );
 }
 
-function MatchmakingScreen({ category, elapsed, botReady, matchmakingStatus, onCancel, onBattle, onBot, onFriend }) {
+function BotChoiceCard({ bot, featured, disabled, onSelect }) {
+  return (
+    <button className={`bot-choice ${featured ? "featured" : ""}`} type="button" disabled={disabled} onClick={() => onSelect(bot.name)}>
+      <span>{featured ? "Best fallback" : bot.strength}</span>
+      <strong>{bot.name}</strong>
+      <small>{bot.note}</small>
+    </button>
+  );
+}
+
+function MatchmakingScreen({ category, elapsed, botReady, matchmakingStatus, botChoices, onCancel, onBattle, onBot, onFriend }) {
   return (
     <main className="screen matchmaking-screen">
       <BrandHeader onHome={onCancel} onLeave={onCancel} compact />
@@ -805,10 +829,21 @@ function MatchmakingScreen({ category, elapsed, botReady, matchmakingStatus, onC
           <LinkIcon size={22} />
           Send this battle to a friend
         </button>
-        <button className="outline-button coral" type="button" disabled={!botReady} onClick={onBot}>
-          <Bot size={22} />
-          {botReady ? "Play a bot now" : "Bot battle unlocks at 5s"}
-        </button>
+        <section className={`bot-dock ${botReady ? "ready" : "locked"}`} aria-label="Bot fallback choices">
+          <div>
+            <Bot size={22} />
+            <strong>{botReady ? "Bot fallback ready" : "Bot fallback unlocks at 5s"}</strong>
+          </div>
+          {botChoices.map((bot, index) => (
+            <BotChoiceCard
+              key={bot.name}
+              bot={bot}
+              featured={index === 0}
+              disabled={!botReady}
+              onSelect={onBot}
+            />
+          ))}
+        </section>
         <button className="text-button" type="button" onClick={onCancel}>
           Cancel search
         </button>
@@ -1811,6 +1846,7 @@ export function App() {
   }, [screen, result]);
 
   const rankedBots = useMemo(() => bots, []);
+  const fallbackBots = useMemo(() => recommendedBotsForCategory(selectedCategory.id), [selectedCategory.id]);
 
   function goHome() {
     resetPath();
@@ -2157,9 +2193,10 @@ export function App() {
         elapsed={matchElapsed}
         botReady={botReady}
         matchmakingStatus={matchmakingStatus}
+        botChoices={fallbackBots}
         onCancel={goHome}
         onBattle={() => startBattle("ranked")}
-        onBot={() => startBattle("bot", rankedBots[0].name)}
+        onBot={(nextBotName) => startBattle("bot", nextBotName)}
         onFriend={startFriend}
       />
     );
