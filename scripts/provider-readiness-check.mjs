@@ -57,6 +57,8 @@ const dns = await dnsState();
 const envOutput = vercelEnv.output;
 const hasVercelSupabaseUrl = envOutput.includes("VITE_SUPABASE_URL");
 const hasVercelSupabaseKey = envOutput.includes("VITE_SUPABASE_PUBLISHABLE_KEY");
+const hasVercelOpenAiKey = envOutput.includes("OPENAI_API_KEY");
+const hasVercelOpenAiModel = envOutput.includes("OPENAI_JUDGE_MODEL");
 const hasApexAlias = vercelAliases.output.includes("judgemebro.com");
 const hasWwwAlias = vercelAliases.output.includes("www.judgemebro.com");
 const apexDnsReady = dns.apexA.includes(vercelIp);
@@ -79,6 +81,8 @@ printStatus(
 );
 printStatus("Vercel Supabase URL env configured", hasVercelSupabaseUrl);
 printStatus("Vercel Supabase publishable key env configured", hasVercelSupabaseKey);
+printStatus("Vercel OpenAI API key env configured", hasVercelOpenAiKey);
+printStatus("Vercel OpenAI judge model env configured", hasVercelOpenAiModel);
 printStatus(
   "Supabase account authenticated",
   supabaseProjects.ok,

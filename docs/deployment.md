@@ -66,6 +66,8 @@ After `.env.local` contains Supabase client values, sync them to Vercel without 
 ```bash
 npm run sync:vercel-env -- --dry-run
 npm run sync:vercel-env
+npm run sync:vercel-server-env -- --dry-run
+npm run sync:vercel-server-env
 npm run check:providers
 ```
 
@@ -136,5 +138,13 @@ It installs the Supabase CLI through `supabase/setup-cli@v2`.
 Vercel deploys `api/judge.js` as a serverless function. The client calls `/api/judge` first and falls back to the local deterministic judge engine when running in plain Vite preview or when the API is unavailable.
 
 When `OPENAI_API_KEY` is configured in Vercel, `/api/judge` uses the OpenAI Responses API with structured JSON output for submitted answer comparisons. `OPENAI_JUDGE_MODEL` is optional and defaults to `gpt-4o-mini`. Do not expose `OPENAI_API_KEY` through any `VITE_` environment variable.
+
+Use the server-only sync script after `.env.local` contains `OPENAI_API_KEY`:
+
+```bash
+npm run test:vercel-server-env-sync
+npm run sync:vercel-server-env -- --dry-run
+npm run sync:vercel-server-env
+```
 
 The API intentionally judges only official battles. Streamer viewer answers are stored/displayed by default and should only be sent to `/api/judge` after the streamer manually selects one.

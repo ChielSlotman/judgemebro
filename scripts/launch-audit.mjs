@@ -149,6 +149,11 @@ const checks = [
     detail: ".env.local",
   },
   {
+    label: "Local OpenAI API key configured",
+    ok: Boolean(localEnv.OPENAI_API_KEY),
+    detail: ".env.local",
+  },
+  {
     label: "Vercel Supabase URL env configured",
     ok: vercelEnv.output.includes("VITE_SUPABASE_URL"),
     detail: "vercel env ls",
@@ -156,6 +161,16 @@ const checks = [
   {
     label: "Vercel Supabase publishable key env configured",
     ok: vercelEnv.output.includes("VITE_SUPABASE_PUBLISHABLE_KEY"),
+    detail: "vercel env ls",
+  },
+  {
+    label: "Vercel OpenAI API key env configured",
+    ok: vercelEnv.output.includes("OPENAI_API_KEY"),
+    detail: "vercel env ls",
+  },
+  {
+    label: "Vercel OpenAI judge model env configured",
+    ok: vercelEnv.output.includes("OPENAI_JUDGE_MODEL"),
     detail: "vercel env ls",
   },
   {
