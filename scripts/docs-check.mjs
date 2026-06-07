@@ -10,6 +10,7 @@ const requiredDocs = [
   "docs/creative-production.md",
   "design-qa.md",
 ];
+const requiredFiles = [".env.example"];
 
 const readme = readFileSync(join(root, "README.md"), "utf8");
 const failures = [];
@@ -21,6 +22,16 @@ for (const doc of requiredDocs) {
 
   if (!readme.includes(doc)) {
     failures.push(`README.md does not reference ${doc}`);
+  }
+}
+
+for (const file of requiredFiles) {
+  if (!existsSync(join(root, file))) {
+    failures.push(`Missing ${file}`);
+  }
+
+  if (!readme.includes(file)) {
+    failures.push(`README.md does not reference ${file}`);
   }
 }
 

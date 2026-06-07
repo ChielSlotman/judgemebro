@@ -12,6 +12,7 @@
     "test:workflows": "node scripts/workflow-check.mjs",
     "test:deployment": "node scripts/deployment-check.mjs",
     "test:docs": "node scripts/docs-check.mjs",
+    "test:env-example": "node scripts/env-example-check.mjs",
     "test:vercel-env-sync": "node scripts/sync-vercel-env.mjs --dry-run --env-file scripts/fixtures/supabase-client.env",
     "test:smoke": "node scripts/smoke-test.mjs",
     "verify": "node scripts/verify.mjs",

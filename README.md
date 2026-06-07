@@ -40,7 +40,7 @@ npm run build
 npm run verify
 ```
 
-`verify` runs the normal passing repo checks: judge API contract, Supabase schema/config contract, Supabase migration helper plan, GitHub workflow contract, docs contract, Vercel env sync dry run, GitHub repo creation dry run, GitHub publish dry run, live deployment check, setup check, production build, and the full smoke flow.
+`verify` runs the normal passing repo checks: judge API contract, Supabase schema/config contract, Supabase migration helper plan, GitHub workflow contract, docs/env contract, Vercel env sync dry run, GitHub repo creation dry run, GitHub publish dry run, live deployment check, setup check, production build, and the full smoke flow.
 
 `launch:audit` remains separate because it is expected to fail until external GitHub, DNS, and Supabase account setup is complete.
 
@@ -62,6 +62,12 @@ npm run launch:audit
 This command exits non-zero until the GitHub remote, Vercel deployment, custom-domain DNS, local/Vercel Supabase env vars, and Supabase auth are all complete.
 
 ## Vercel Env Sync
+
+Copy `.env.example` to `.env.local`, then add the real Supabase client values:
+
+```bash
+copy .env.example .env.local
+```
 
 ```bash
 npm run sync:vercel-env -- --dry-run

@@ -16,6 +16,7 @@ Do not expose `SUPABASE_SERVICE_ROLE_KEY` to client-side code.
 After `.env.local` is filled, sync the public Supabase client values to Vercel:
 
 ```bash
+npm run test:env-example
 npm run sync:vercel-env -- --dry-run
 npm run sync:vercel-env
 ```

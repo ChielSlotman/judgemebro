@@ -6,6 +6,7 @@ const steps = [
   ["npm", ["run", "test:supabase-migrate"]],
   ["npm", ["run", "test:workflows"]],
   ["npm", ["run", "test:docs"]],
+  ["npm", ["run", "test:env-example"]],
   ["npm", ["run", "test:vercel-env-sync"]],
   ["npm", ["run", "test:github-create"]],
   ["npm", ["run", "test:github-publish"]],
