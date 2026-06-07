@@ -52,6 +52,7 @@ npx vercel deploy
 ```
 
 For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes create preview deployments. Production should deploy from `main`.
+GitHub remote and repository secret setup is tracked in `docs/github.md`.
 
 On this Windows machine, `vercel build` can fail locally with `spawn cmd.exe ENOENT` even when `npm run build` succeeds. Use `vercel deploy` for cloud builds, or run the prebuilt workflow in GitHub Actions/Linux.
 

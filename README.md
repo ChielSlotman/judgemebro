@@ -41,10 +41,11 @@ npm run test:judge
 npm run test:supabase
 npm run test:workflows
 npm run test:deployment
+npm run test:docs
 npm run test:smoke
 ```
 
-The judge test validates the Vercel API contract. The Supabase test statically checks that public tables have RLS and policies, that Realtime tables are published, and that the service-role key is not referenced by client source. The workflow test checks the GitHub CI, Vercel deploy, and Supabase migration workflow contracts. The deployment test checks the live Vercel app, live judge API, and reports custom-domain DNS status. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
+The judge test validates the Vercel API contract. The Supabase test statically checks that public tables have RLS and policies, that Realtime tables are published, and that the service-role key is not referenced by client source. The workflow test checks the GitHub CI, Vercel deploy, and Supabase migration workflow contracts. The deployment test checks the live Vercel app, live judge API, and reports custom-domain DNS status. The docs test checks that provider handoff docs are present and linked. The smoke test starts a built Vite preview and verifies the ranked, friend, bot, streamer, viewer, and official streamer battle flows.
 
 ## Setup Check
 
@@ -58,5 +59,6 @@ Use this before pushing/deploying to see whether GitHub, Vercel, and Supabase lo
 
 - Supabase schema and RLS notes: `docs/supabase.md`
 - Vercel and GitHub CI notes: `docs/deployment.md`
+- GitHub remote and secrets setup: `docs/github.md`
 - Creative production brief and generated prompt pack: `docs/creative-production.md`
 - Design QA report: `design-qa.md`

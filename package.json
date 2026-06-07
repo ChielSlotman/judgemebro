@@ -11,6 +11,7 @@
     "test:supabase": "node scripts/supabase-schema-check.mjs",
     "test:workflows": "node scripts/workflow-check.mjs",
     "test:deployment": "node scripts/deployment-check.mjs",
+    "test:docs": "node scripts/docs-check.mjs",
     "test:smoke": "node scripts/smoke-test.mjs",
     "setup:check": "node scripts/setup-check.mjs"
   },

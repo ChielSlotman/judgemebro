@@ -35,6 +35,9 @@ jobs:
       - name: Workflow contract check
         run: npm run test:workflows
 
+      - name: Docs contract check
+        run: npm run test:docs
+
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
