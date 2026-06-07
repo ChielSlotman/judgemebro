@@ -4,6 +4,7 @@ const DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
 const DEFAULT_OPENAI_TTS_VOICE = "onyx";
 const DEFAULT_GROQ_TTS_MODEL = "canopylabs/orpheus-v1-english";
 const DEFAULT_GROQ_TTS_VOICE = "troy";
+const DEFAULT_GROQ_TTS_STYLE = "playful, cheeky male sports commentator, slight funny accent, natural and punchy";
 
 export default async function handler(request, response) {
   if (request.method !== "POST") {
@@ -91,7 +92,7 @@ async function createGroqSpeech(input) {
     body: JSON.stringify({
       model: process.env.GROQ_TTS_MODEL || DEFAULT_GROQ_TTS_MODEL,
       voice: process.env.GROQ_TTS_VOICE || DEFAULT_GROQ_TTS_VOICE,
-      input: `[playful, cheeky, slightly funny commentator] ${input}`.slice(0, MAX_GROQ_TTS_CHARS),
+      input: `[${process.env.GROQ_TTS_STYLE || DEFAULT_GROQ_TTS_STYLE}] ${input}`.slice(0, MAX_GROQ_TTS_CHARS),
       response_format: "wav",
     }),
   });

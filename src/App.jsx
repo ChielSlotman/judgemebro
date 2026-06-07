@@ -50,6 +50,7 @@ import {
   updateStreamerAnswerState,
 } from "./lib/gameRepository.js";
 import { requestJudgeVerdict } from "./lib/judgeClient.js";
+import { hasSupabaseConfig, supabase } from "./lib/supabaseClient.js";
 
 const iconMap = {
   Briefcase,
@@ -71,8 +72,15 @@ function clampAnswer(value) {
   return value.slice(0, MAX_CHARS);
 }
 
-function getScenario(categoryId) {
-  return scenarios[categoryId] ?? scenarios.social;
+function getScenario(categoryId, roundIndex = 0) {
+  const deck = scenarios[categoryId] ?? scenarios.social;
+  if (Array.isArray(deck)) return deck[Math.abs(roundIndex) % deck.length];
+  return deck;
+}
+
+function getScenarioCount(categoryId) {
+  const deck = scenarios[categoryId] ?? scenarios.social;
+  return Array.isArray(deck) ? deck.length : 1;
 }
 
 function inviteBaseUrl() {
@@ -168,12 +176,19 @@ function speakVerdict(result) {
   if (typeof window === "undefined" || !result) return;
 
   window.speechSynthesis?.cancel?.();
+  if (
+    import.meta.env.VITE_HOSTED_TTS_ENABLED !== "true" ||
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)
+  ) {
+    return;
+  }
+
   const verdict = result.youWin ? "You win." : "You lose.";
   const points = result.mode === "bot" ? "Unranked bot battle." : `${result.points > 0 ? "Plus" : "Minus"} ${Math.abs(result.points)} points.`;
   const narration = `${verdict} ${points} ${result.reason}`;
 
-  playHostedVerdict(narration).catch(() => {
-    speakBrowserVerdict(narration);
+  playHostedVerdict(narration).catch((error) => {
+    console.warn("Hosted verdict voice unavailable", error);
   });
 }
 
@@ -361,7 +376,7 @@ function CategoryTile({ category, selected, onSelect }) {
   );
 }
 
-function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, onStreamer, onProfile }) {
+function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, onStreamer, onProfile, onRewards }) {
   return (
     <main className="screen home-screen">
       <BrandHeader onHome={() => {}} onProfile={onProfile} />
@@ -436,14 +451,108 @@ function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, o
         </div>
       </section>
 
-      <button className="reward-strip" type="button" onClick={onProfile}>
+      <button className="reward-strip" type="button" onClick={onRewards}>
         <Gift size={34} />
         <span>
           <strong>3-day streak</strong>
-          Keep it up to unlock your next reward.
+          Tap to claim and preview rewards.
         </span>
         <ChevronRight size={26} />
       </button>
+    </main>
+  );
+}
+
+function AccountScreen({ user, authStatus, onGoogle, onDemo, onHome, onProfile, onLegal }) {
+  return (
+    <main className="screen account-screen">
+      <BrandHeader onHome={onHome} onLeave={onHome} compact />
+      <section className="auth-card">
+        <span className="section-label">Account</span>
+        <h1>{user ? "You are in" : "Sign in to keep score"}</h1>
+        <p>{user ? "Your rating, streak, and category stats are tied to this profile." : "Use Google when Supabase Auth is connected, or use demo mode for prototype testing."}</p>
+        <div className="auth-user">
+          <img src={user?.avatarUrl || "/assets/avatar-you.png"} alt="" />
+          <div>
+            <strong>{user?.name || "Guest player"}</strong>
+            <span>{user?.email || "Not signed in yet"}</span>
+          </div>
+        </div>
+        <button className="primary-button lime" type="button" onClick={onGoogle}>
+          <BadgeCheck size={24} />
+          Continue with Google
+        </button>
+        <button className="outline-button" type="button" onClick={onDemo}>
+          Use demo profile
+        </button>
+        <p className="auth-status">{authStatus}</p>
+      </section>
+      <section className="legal-strip">
+        <button type="button" onClick={() => onLegal("terms")}>Terms</button>
+        <button type="button" onClick={() => onLegal("privacy")}>Privacy</button>
+        <button type="button" onClick={onProfile}>View profile</button>
+      </section>
+    </main>
+  );
+}
+
+function RewardScreen({ streak, battlesLeft, onHome, onFind, onProfile }) {
+  const rewards = [
+    { title: "3-day streak", status: "Claimed", detail: "One extra ranked battle is active today." },
+    { title: "5-day streak", status: "Next", detail: "Unlock a fresh prompt pack preview." },
+    { title: "7-day streak", status: "Locked", detail: "Double points token for one battle." },
+  ];
+
+  return (
+    <main className="screen reward-screen">
+      <BrandHeader onHome={onHome} onLeave={onHome} compact />
+      <section className="reward-hero">
+        <Gift size={54} />
+        <span className="section-label">Rewards</span>
+        <h1>{streak}-day streak</h1>
+        <p>{battlesLeft} ranked battles left today. Keep playing to unlock the next drop.</p>
+      </section>
+      <section className="reward-list">
+        {rewards.map((reward) => (
+          <article key={reward.title} className={reward.status.toLowerCase()}>
+            <div>
+              <strong>{reward.title}</strong>
+              <p>{reward.detail}</p>
+            </div>
+            <span>{reward.status}</span>
+          </article>
+        ))}
+      </section>
+      <section className="cta-stack">
+        <button className="primary-button lime" type="button" onClick={onFind}>Play for streak</button>
+        <button className="outline-button" type="button" onClick={onProfile}>Profile stats</button>
+      </section>
+    </main>
+  );
+}
+
+function LegalScreen({ type, onHome }) {
+  const isPrivacy = type === "privacy";
+  return (
+    <main className="screen legal-screen">
+      <BrandHeader onHome={onHome} onLeave={onHome} compact />
+      <section className="legal-page">
+        <span className="section-label">{isPrivacy ? "Privacy" : "Terms"}</span>
+        <h1>{isPrivacy ? "Privacy Policy" : "Terms and Conditions"}</h1>
+        <p>Last updated June 7, 2026. This prototype lets players submit short answers, join rooms, and receive AI-assisted verdicts.</p>
+        <article>
+          <h2>{isPrivacy ? "What we store" : "Using the game"}</h2>
+          <p>{isPrivacy ? "We may store display names, room codes, answers, verdicts, and lightweight gameplay stats so battles and streamer rooms can function." : "Do not submit personal, hateful, illegal, or unsafe content. AI verdicts are entertainment, not professional advice."}</p>
+        </article>
+        <article>
+          <h2>{isPrivacy ? "Third-party services" : "Rankings and verdicts"}</h2>
+          <p>{isPrivacy ? "The app can use Supabase, Vercel, Groq, and OpenAI-compatible services for auth, storage, hosting, and generated voice or verdicts." : "Ranked points are prototype scoring and can be reset while the platform is being built."}</p>
+        </article>
+        <article>
+          <h2>Contact</h2>
+          <p>For takedown, privacy, or account requests, contact the site owner for judgemebro.com.</p>
+        </article>
+      </section>
     </main>
   );
 }
@@ -510,6 +619,7 @@ function MatchmakingScreen({ category, elapsed, botReady, matchmakingStatus, onC
 
 function BattleScreen({
   category,
+  scenario,
   timer,
   answer,
   setAnswer,
@@ -518,7 +628,6 @@ function BattleScreen({
   opponent = "Juno",
   opponentRating = "1135",
 }) {
-  const scenario = getScenario(category.id);
   const { isListening, voiceStatus, toggleListening, voiceSupported } = useVoiceInput(setAnswer);
 
   return (
@@ -711,7 +820,7 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
   );
 }
 
-function FriendBattleScreen({ category, joined, roomCode, status, onHome, onStart, onBot }) {
+function FriendBattleScreen({ category, scenario, joined, roomCode, status, onHome, onStart, onBot }) {
   const [copied, setCopied] = useState(false);
   const link = friendBattleLink(roomCode);
 
@@ -753,7 +862,7 @@ function FriendBattleScreen({ category, joined, roomCode, status, onHome, onStar
       </section>
       <section className="scenario-card compact-scenario">
         <span className="section-label">{category.name}</span>
-        <h1>{joined ? getScenario(category.id).prompt : "Dilemma unlocks when your friend joins."}</h1>
+        <h1>{joined ? scenario.prompt : "Dilemma unlocks when your friend joins."}</h1>
       </section>
       <section className="cta-stack">
         <button className="primary-button lime" type="button" disabled={!joined} onClick={onStart}>
@@ -769,20 +878,20 @@ function FriendBattleScreen({ category, joined, roomCode, status, onHome, onStar
   );
 }
 
-function ProfileScreen({ onHome, onFind, onFriend, onStreamer }) {
+function ProfileScreen({ user, rating, streak, onHome, onFind, onFriend, onStreamer, onAccount, onLegal }) {
   return (
     <main className="screen profile-screen">
       <BrandHeader onHome={onHome} onLeave={onHome} compact />
       <section className="profile-card">
-        <img src="/assets/avatar-you.png" alt="Profile" />
-        <h1>chiel</h1>
+        <img src={user?.avatarUrl || "/assets/avatar-you.png"} alt="Profile" />
+        <h1>{user?.name || "Guest bro"}</h1>
         <div className="profile-rating">
           <img src="/assets/rank-gold.svg" alt="" />
-          <strong>1128</strong>
+          <strong>{rating}</strong>
           <span>Gold</span>
         </div>
         <div className="rank-progress"><span /></div>
-        <p>12W / 7L. Best category: Negotiation.</p>
+        <p>12W / 7L. {streak}-day streak. Best category: Negotiation.</p>
       </section>
       <section className="category-ratings">
         {categories.map((category, index) => (
@@ -798,6 +907,10 @@ function ProfileScreen({ onHome, onFind, onFriend, onStreamer }) {
           <button className="outline-button" type="button" onClick={onFriend}>Challenge friend</button>
           <button className="outline-button coral" type="button" onClick={onStreamer}>Streamer mode</button>
         </div>
+        <div className="split-actions">
+          <button className="outline-button" type="button" onClick={onAccount}>Account</button>
+          <button className="outline-button" type="button" onClick={() => onLegal("terms")}>Terms</button>
+        </div>
       </section>
     </main>
   );
@@ -811,14 +924,18 @@ function normalizeViewerAnswer(answer) {
   };
 }
 
-function StreamerScreen({ roomCode, category, setCategory, onHome, onViewer, onOfficial }) {
-  const [streamerAnswer, setStreamerAnswer] = useState(() => getScenario(category.id).winningAnswer);
+function StreamerScreen({ roomCode, category, scenario, roundIndex, setCategory, onHome, onViewer, onOfficial, onNextScenario }) {
+  const [streamerAnswer, setStreamerAnswer] = useState(() => scenario.winningAnswer);
   const [answers, setAnswers] = useState(seedViewerAnswers);
   const [selected, setSelected] = useState(seedViewerAnswers[0]);
   const [copied, setCopied] = useState(false);
   const [streamStatus, setStreamStatus] = useState("Viewer answers are free until selected.");
   const [roundNumber, setRoundNumber] = useState(1);
-  const currentScenario = getScenario(category.id);
+  const currentScenario = scenario;
+
+  useEffect(() => {
+    setStreamerAnswer(currentScenario.winningAnswer);
+  }, [currentScenario]);
 
   useEffect(() => {
     let cancelled = false;
@@ -901,9 +1018,11 @@ function StreamerScreen({ roomCode, category, setCategory, onHome, onViewer, onO
   function startNextRound() {
     const currentIndex = categories.findIndex((item) => item.id === category.id);
     const nextCategory = categories[(currentIndex + 1) % categories.length];
+    const nextScenario = getScenario(nextCategory.id, roundIndex + 1);
     setCategory(nextCategory);
+    onNextScenario(nextCategory.id);
     setRoundNumber((value) => value + 1);
-    setStreamerAnswer(getScenario(nextCategory.id).winningAnswer);
+    setStreamerAnswer(nextScenario.winningAnswer);
     setSelected(seedViewerAnswers[0]);
     setAnswers(seedViewerAnswers);
     setStreamStatus("New round live. Viewer answers stay free until selected.");
@@ -942,14 +1061,21 @@ function StreamerScreen({ roomCode, category, setCategory, onHome, onViewer, onO
                 className={item.id === category.id ? "active" : ""}
                 type="button"
                 onClick={() => {
+                  const nextScenario = getScenario(item.id, roundIndex + 1);
                   setCategory(item);
+                  onNextScenario(item.id);
                   setRoundNumber((value) => value + 1);
-                  setStreamerAnswer(getScenario(item.id).winningAnswer);
+                  setStreamerAnswer(nextScenario.winningAnswer);
                 }}
               >
                 {item.name}
               </button>
             ))}
+          </div>
+          <div className="room-code-card">
+            <span>Viewer code</span>
+            <strong>{roomCode}</strong>
+            <small>{streamerViewerLink(roomCode)}</small>
           </div>
           <label>
             Streamer answer - round {roundNumber}
@@ -986,12 +1112,12 @@ function StreamerScreen({ roomCode, category, setCategory, onHome, onViewer, onO
   );
 }
 
-function ViewerScreen({ roomCode, category, onHome }) {
+function ViewerScreen({ roomCode, category, scenario, onHome }) {
   const [name, setName] = useState("Viewer 27");
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const { isListening, voiceStatus, toggleListening, voiceSupported } = useVoiceInput(setAnswer);
-  const currentScenario = getScenario(category.id);
+  const currentScenario = scenario;
 
   function submitViewerAnswer() {
     setSubmitted(true);
@@ -1056,6 +1182,7 @@ export function App() {
   const initialInvite = useMemo(() => parseInvitePath(window.location.pathname), []);
   const [screen, setScreen] = useState(initialInvite?.screen ?? "home");
   const [selectedCategory, setSelectedCategory] = useState(categories[5]);
+  const [scenarioRound, setScenarioRound] = useState(0);
   const [friendRoomCode, setFriendRoomCode] = useState(
     initialInvite?.screen === "friend" ? initialInvite.roomCode : DEFAULT_FRIEND_ROOM,
   );
@@ -1066,6 +1193,11 @@ export function App() {
   const [timer, setTimer] = useState(24);
   const [answer, setAnswer] = useState("");
   const [rating, setRating] = useState(1128);
+  const [streak, setStreak] = useState(3);
+  const [battlesLeft, setBattlesLeft] = useState(4);
+  const [user, setUser] = useState(null);
+  const [authStatus, setAuthStatus] = useState("Google sign-in is ready when Supabase Auth is configured.");
+  const [legalType, setLegalType] = useState("terms");
   const [result, setResult] = useState(null);
   const [friendJoined, setFriendJoined] = useState(initialInvite?.screen === "friend");
   const [friendPersistence, setFriendPersistence] = useState(initialInvite?.screen === "friend" ? "checking" : "fallback");
@@ -1082,6 +1214,38 @@ export function App() {
   const narratedResultRef = useRef(null);
 
   const botReady = matchElapsed >= 5;
+  const currentScenario = getScenario(selectedCategory.id, scenarioRound);
+
+  useEffect(() => {
+    if (!supabase) return undefined;
+    let cancelled = false;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (cancelled || !data.session?.user) return;
+      const nextUser = data.session.user;
+      setUser({
+        name: nextUser.user_metadata?.full_name || nextUser.email?.split("@")[0] || "Player",
+        email: nextUser.email,
+        avatarUrl: nextUser.user_metadata?.avatar_url,
+      });
+      setAuthStatus("Signed in with Google.");
+    });
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) return;
+      setUser({
+        name: session.user.user_metadata?.full_name || session.user.email?.split("@")[0] || "Player",
+        email: session.user.email,
+        avatarUrl: session.user.user_metadata?.avatar_url,
+      });
+      setAuthStatus("Signed in with Google.");
+    });
+
+    return () => {
+      cancelled = true;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (screen !== "matchmaking") return undefined;
@@ -1094,7 +1258,7 @@ export function App() {
 
     let cancelled = false;
     let subscription = { unsubscribe: () => {} };
-    const scenario = getScenario(selectedCategory.id);
+    const scenario = currentScenario;
 
     findOrCreateRankedMatch({
       category: selectedCategory,
@@ -1149,7 +1313,7 @@ export function App() {
       cancelled = true;
       subscription.unsubscribe();
     };
-  }, [screen, battleMode, selectedCategory]);
+  }, [screen, battleMode, selectedCategory, currentScenario]);
 
   useEffect(() => {
     if (!["battle", "waiting"].includes(screen)) return undefined;
@@ -1171,7 +1335,7 @@ export function App() {
     if (screen !== "friend" || friendPersistence !== "checking") return undefined;
 
     let cancelled = false;
-    const scenario = getScenario(selectedCategory.id);
+    const scenario = currentScenario;
     const action =
       friendRole === "host"
         ? createFriendBattleRoom({
@@ -1225,7 +1389,7 @@ export function App() {
     return () => {
       cancelled = true;
     };
-  }, [screen, friendPersistence, friendRole, friendRoomCode, selectedCategory]);
+  }, [screen, friendPersistence, friendRole, friendRoomCode, selectedCategory, currentScenario]);
 
   useEffect(() => {
     if (screen !== "friend" || friendPersistence !== "real") return undefined;
@@ -1268,6 +1432,35 @@ export function App() {
     setRankedRoom(null);
     setRankedPresenceId(null);
     isJudgingRef.current = false;
+  }
+
+  function openLegal(type = "terms") {
+    setLegalType(type);
+    setScreen("legal");
+  }
+
+  function nextScenario(categoryId = selectedCategory.id) {
+    setScenarioRound((current) => (current + 1) % getScenarioCount(categoryId));
+  }
+
+  async function signInWithGoogle() {
+    if (!hasSupabaseConfig || !supabase) {
+      setUser({ name: "Demo Player", email: "demo@judgemebro.com", avatarUrl: "/assets/avatar-you.png" });
+      setAuthStatus("Google OAuth needs Supabase Auth config. Demo profile is active for now.");
+      return;
+    }
+
+    setAuthStatus("Opening Google sign-in...");
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: window.location.origin },
+    });
+    if (error) setAuthStatus(`Google sign-in failed: ${error.message}`);
+  }
+
+  function signInDemo() {
+    setUser({ name: "Demo Player", email: "demo@judgemebro.com", avatarUrl: "/assets/avatar-you.png" });
+    setAuthStatus("Demo profile active. Google can be connected in Supabase Auth.");
   }
 
   function startMatchmaking() {
@@ -1318,7 +1511,7 @@ export function App() {
   async function finishRound() {
     if (isJudgingRef.current) return;
     isJudgingRef.current = true;
-    const scenario = getScenario(selectedCategory.id);
+    const scenario = currentScenario;
     const nextResult = await requestJudgeVerdict({
       category: selectedCategory,
       prompt: scenario.prompt,
@@ -1360,6 +1553,9 @@ export function App() {
       });
     }
     setRating((current) => current + nextResult.points);
+    setBattlesLeft((current) => Math.max(0, current - (battleMode === "bot" ? 0 : 1)));
+    setStreak((current) => Math.max(current, 3));
+    setScenarioRound((current) => (current + 1) % getScenarioCount(selectedCategory.id));
     isJudgingRef.current = false;
     setScreen("result");
   }
@@ -1382,6 +1578,7 @@ export function App() {
     resetPath();
     setStreamRoomCode(createRoomCode());
     setSelectedCategory(categories[1]);
+    setScenarioRound(0);
     setScreen("streamer");
   }
 
@@ -1398,7 +1595,7 @@ export function App() {
       mode: "streamer",
       category: selectedCategory,
       opponent: viewerAnswer.name,
-      prompt: getScenario(selectedCategory.id).prompt,
+      prompt: currentScenario.prompt,
       yourAnswer: streamerAnswer,
       opponentAnswer: viewerAnswer.text,
     });
@@ -1429,6 +1626,7 @@ export function App() {
     return (
       <BattleScreen
         category={selectedCategory}
+        scenario={currentScenario}
         timer={timer}
         answer={answer}
         setAnswer={setAnswer}
@@ -1467,6 +1665,7 @@ export function App() {
     return (
       <FriendBattleScreen
         category={selectedCategory}
+        scenario={currentScenario}
         joined={friendJoined}
         roomCode={friendRoomCode}
         status={friendStatus}
@@ -1480,12 +1679,47 @@ export function App() {
   if (screen === "profile") {
     return (
       <ProfileScreen
+        user={user}
+        rating={rating}
+        streak={streak}
         onHome={goHome}
         onFind={startMatchmaking}
         onFriend={startFriend}
         onStreamer={startStreamer}
+        onAccount={() => setScreen("account")}
+        onLegal={openLegal}
       />
     );
+  }
+
+  if (screen === "account") {
+    return (
+      <AccountScreen
+        user={user}
+        authStatus={authStatus}
+        onGoogle={signInWithGoogle}
+        onDemo={signInDemo}
+        onHome={goHome}
+        onProfile={() => setScreen("profile")}
+        onLegal={openLegal}
+      />
+    );
+  }
+
+  if (screen === "rewards") {
+    return (
+      <RewardScreen
+        streak={streak}
+        battlesLeft={battlesLeft}
+        onHome={goHome}
+        onFind={startMatchmaking}
+        onProfile={() => setScreen("profile")}
+      />
+    );
+  }
+
+  if (screen === "legal") {
+    return <LegalScreen type={legalType} onHome={goHome} />;
   }
 
   if (screen === "streamer") {
@@ -1493,8 +1727,11 @@ export function App() {
       <StreamerScreen
         roomCode={streamRoomCode}
         category={selectedCategory}
+        scenario={currentScenario}
+        roundIndex={scenarioRound}
         setCategory={setSelectedCategory}
         onHome={goHome}
+        onNextScenario={nextScenario}
         onViewer={() => {
           updatePath(streamerViewerPath(streamRoomCode));
           setScreen("viewer");
@@ -1509,6 +1746,7 @@ export function App() {
       <ViewerScreen
         roomCode={streamRoomCode}
         category={selectedCategory}
+        scenario={currentScenario}
         onHome={() => {
           resetPath();
           setScreen("streamer");
@@ -1525,6 +1763,7 @@ export function App() {
       onFriend={startFriend}
       onStreamer={startStreamer}
       onProfile={() => setScreen("profile")}
+      onRewards={() => setScreen("rewards")}
     />
   );
 }
