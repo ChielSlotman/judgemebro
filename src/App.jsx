@@ -30,7 +30,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { bots, categories, scenarios } from "./data.js";
+import { bots, categories } from "./data.js";
 import { getBotAnswer } from "./lib/botEngine.js";
 import {
   DAILY_RANKED_BATTLES,
@@ -62,6 +62,7 @@ import {
   updateStreamerAnswerState,
 } from "./lib/gameRepository.js";
 import { requestJudgeVerdict } from "./lib/judgeClient.js";
+import { getScenario, randomScenarioRound } from "./lib/scenarioEngine.js";
 import { hasSupabaseConfig, supabase } from "./lib/supabaseClient.js";
 
 const iconMap = {
@@ -83,27 +84,6 @@ const VOICE_SUPPORT =
 
 function clampAnswer(value) {
   return value.slice(0, MAX_CHARS);
-}
-
-function getScenario(categoryId, roundIndex = 0) {
-  const deck = scenarios[categoryId] ?? scenarios.social;
-  if (Array.isArray(deck)) return deck[Math.abs(roundIndex) % deck.length];
-  return deck;
-}
-
-function getScenarioCount(categoryId) {
-  const deck = scenarios[categoryId] ?? scenarios.social;
-  return Array.isArray(deck) ? deck.length : 1;
-}
-
-function randomScenarioRound(categoryId, previousRound = -1) {
-  const count = getScenarioCount(categoryId);
-  if (count <= 1) return 0;
-
-  const previousIndex = Math.abs(previousRound) % count;
-  let nextIndex = Math.floor(Math.random() * count);
-  if (nextIndex === previousIndex) nextIndex = (nextIndex + 1) % count;
-  return nextIndex;
 }
 
 function recommendedBotsForCategory(categoryId) {
@@ -1954,6 +1934,10 @@ export function App() {
     setScenarioRound((current) => randomScenarioRound(categoryId, current));
   }
 
+  function queueFreshScenario(categoryId = selectedCategory.id) {
+    setScenarioRound((current) => randomScenarioRound(categoryId, current));
+  }
+
   function claimStreakReward() {
     if (rewardClaimed) return;
     setRewardClaimDate(todayKey());
@@ -2138,6 +2122,7 @@ export function App() {
     }
 
     resetPath();
+    queueFreshScenario(selectedCategory.id);
     setBattleAllowanceDate(todayKey());
     setScreen("matchmaking");
     setMatchElapsed(0);
@@ -2235,6 +2220,7 @@ export function App() {
   function startFriend() {
     const nextRoomCode = createRoomCode();
     updatePath(friendBattlePath(nextRoomCode));
+    queueFreshScenario(selectedCategory.id);
     setFriendRoomCode(nextRoomCode);
     setFriendJoined(false);
     setFriendPersistence("checking");

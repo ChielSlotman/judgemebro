@@ -10,6 +10,7 @@
     "test:judge": "node scripts/judge-api-test.mjs",
     "test:tts": "node scripts/tts-api-test.mjs",
     "test:bot": "node scripts/bot-engine-test.mjs",
+    "test:scenarios": "node scripts/scenario-engine-test.mjs",
     "test:daily": "node scripts/daily-allowance-test.mjs",
     "test:content": "node scripts/content-check.mjs",
     "test:supabase": "node scripts/supabase-schema-check.mjs",
