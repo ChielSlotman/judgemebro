@@ -1,9 +1,9 @@
 const MAX_OPENAI_TTS_CHARS = 900;
-const MAX_GROQ_TTS_CHARS = 900;
+const MAX_GROQ_TTS_CHARS = 190;
 const DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
 const DEFAULT_OPENAI_TTS_VOICE = "onyx";
-const DEFAULT_GROQ_TTS_MODEL = "playai-tts";
-const DEFAULT_GROQ_TTS_VOICE = "Fritz-PlayAI";
+const DEFAULT_GROQ_TTS_MODEL = "canopylabs/orpheus-v1-english";
+const DEFAULT_GROQ_TTS_VOICE = "troy";
 
 export default async function handler(request, response) {
   if (request.method !== "POST") {
@@ -91,7 +91,7 @@ async function createGroqSpeech(input) {
     body: JSON.stringify({
       model: process.env.GROQ_TTS_MODEL || DEFAULT_GROQ_TTS_MODEL,
       voice: process.env.GROQ_TTS_VOICE || DEFAULT_GROQ_TTS_VOICE,
-      input: input.slice(0, MAX_GROQ_TTS_CHARS),
+      input: `[confident] ${input}`.slice(0, MAX_GROQ_TTS_CHARS),
       response_format: "wav",
     }),
   });
