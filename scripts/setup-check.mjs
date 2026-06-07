@@ -61,6 +61,7 @@ const vercel = commandExists("vercel");
 const npxVercel = commandExists("npm", ["exec", "vercel", "--", "--version"]);
 const gh = commandExists("gh");
 const supabase = commandExists("supabase");
+const npxSupabase = commandExists("npm", ["exec", "supabase", "--", "--version"]);
 const remote = gitRemote();
 
 printStatus("Git repository", existsSync(join(root, ".git")));
@@ -76,7 +77,15 @@ printStatus(
 );
 printStatus("Vercel project linked", existsSync(join(root, ".vercel", "project.json")));
 printStatus("GitHub CLI available", gh.ok, gh.ok ? gh.output.split(/\r?\n/)[0] : "install gh or push through GitHub Desktop/web");
-printStatus("Supabase CLI available", supabase.ok, supabase.ok ? supabase.output.split(/\r?\n/)[0] : "install Supabase CLI or use SQL editor");
+printStatus(
+  "Supabase CLI available",
+  supabase.ok || npxSupabase.ok,
+  supabase.ok
+    ? supabase.output.split(/\r?\n/)[0]
+    : npxSupabase.ok
+      ? `npx/npm exec available: ${npxSupabase.output.split(/\r?\n/).at(-1)}`
+      : "install Supabase CLI or use SQL editor",
+);
 printStatus("Supabase URL set", Boolean(env.VITE_SUPABASE_URL), ".env.local");
 printStatus("Supabase publishable key set", Boolean(env.VITE_SUPABASE_PUBLISHABLE_KEY), ".env.local");
 printStatus("Vercel config", existsSync(join(root, "vercel.json")));

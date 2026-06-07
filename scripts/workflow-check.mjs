@@ -8,6 +8,7 @@ const workflowChecks = [
     file: ".github/workflows/ci.yml",
     requirements: [
       "npm ci",
+      "node-version: 24",
       "npm run build",
       "npm run test:judge",
       "npm run test:supabase",
@@ -22,6 +23,7 @@ const workflowChecks = [
       "VERCEL_TOKEN",
       "VERCEL_ORG_ID",
       "VERCEL_PROJECT_ID",
+      "node-version: 24",
       "npm run build",
       "npm run test:judge",
       "npm run test:supabase",
@@ -38,6 +40,7 @@ const workflowChecks = [
       "SUPABASE_ACCESS_TOKEN",
       "SUPABASE_DB_PASSWORD",
       "SUPABASE_PROJECT_REF",
+      "node-version: 24",
       "supabase/setup-cli@v2",
       "npm run test:supabase",
       "supabase link",

@@ -8,6 +8,13 @@ The repo includes `vercel.json` for a Vite deployment:
 - build: `npm run build`
 - output: `dist`
 
+Current linked project:
+
+- scope: `michaels-projects-d6b99e1a`
+- project: `judgemebro`
+- production URL: `https://judgemebro.vercel.app`
+- project ID and org ID are stored locally in `.vercel/project.json`, which is intentionally gitignored.
+
 Recommended first-time setup:
 
 ```bash
@@ -21,6 +28,8 @@ npx vercel deploy
 ```
 
 For GitHub-based deployment, connect the GitHub repo to Vercel and let pushes create preview deployments. Production should deploy from `main`.
+
+On this Windows machine, `vercel build` can fail locally with `spawn cmd.exe ENOENT` even when `npm run build` succeeds. Use `vercel deploy` for cloud builds, or run the prebuilt workflow in GitHub Actions/Linux.
 
 ## GitHub CI
 

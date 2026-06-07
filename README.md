@@ -2,6 +2,8 @@
 
 Fast competitive AI dilemma game prototype.
 
+Live Vercel deployment: https://judgemebro.vercel.app
+
 ## Stack
 
 - React 19 + Vite
