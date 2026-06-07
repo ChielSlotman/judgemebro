@@ -770,7 +770,7 @@ function BattleScreen({
             {category.name}
           </strong>
         </div>
-        <div className="timer-block">
+        <div className={`timer-block ${timer <= 8 ? "urgent" : ""}`}>
           <span className="section-label">Time left</span>
           <strong>{timer}s</strong>
           <span className="timer-ring" style={{ "--timer-progress": `${Math.max(timer, 0) / 24}turn` }} />
@@ -893,6 +893,11 @@ function ResultScreen({ result, rating, onRematch, onNew, onHome, onShare }) {
     <main className="screen result-screen">
       <BrandHeader onHome={onHome} compact />
       <section className={`verdict-hero ${result.youWin ? "win" : "loss"}`}>
+        <div className="result-burst" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </div>
         <span className="section-label">AI judge has spoken</span>
         <h1>{result.youWin ? "You win" : "You lose"}</h1>
         <div className="point-burst">
