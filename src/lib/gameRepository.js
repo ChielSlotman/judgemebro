@@ -117,6 +117,24 @@ export async function createStreamerRoom({
   return { room: data, hostPresenceId };
 }
 
+export async function getStreamerRoom(roomCode) {
+  if (!hasSupabaseConfig || !supabase || !roomCode) return { skipped: true };
+
+  const { data, error } = await supabase
+    .from("streamer_rooms")
+    .select("*")
+    .eq("room_code", roomCode)
+    .eq("is_live", true)
+    .maybeSingle();
+
+  if (error) {
+    console.warn("Supabase streamer room lookup failed", error);
+    return { error };
+  }
+
+  return { room: data };
+}
+
 export async function updateStreamerAnswerState({ answerId, hidden, selectedForStream, selectedForOfficialBattle }) {
   if (!hasSupabaseConfig || !supabase || !isUuid(answerId)) return { skipped: true };
 
@@ -521,6 +539,32 @@ export function subscribeToStreamerAnswers(roomCode, onChange) {
         event: "*",
         schema: "public",
         table: "streamer_viewer_answers",
+        filter: `room_code=eq.${roomCode}`,
+      },
+      onChange,
+    )
+    .subscribe();
+
+  return {
+    skipped: false,
+    channel,
+    unsubscribe: () => {
+      supabase.removeChannel(channel);
+    },
+  };
+}
+
+export function subscribeToStreamerRoom(roomCode, onChange) {
+  if (!hasSupabaseConfig || !supabase || !roomCode) return { skipped: true, unsubscribe: () => {} };
+
+  const channel = supabase
+    .channel(`streamer-room:${roomCode}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "streamer_rooms",
         filter: `room_code=eq.${roomCode}`,
       },
       onChange,

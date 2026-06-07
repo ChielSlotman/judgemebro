@@ -39,6 +39,7 @@ import {
   getPlayerPresenceId,
   getRankedBattleAnswers,
   getRankedBattleRoom,
+  getStreamerRoom,
   joinFriendBattleRoom,
   markFriendBattleJudged,
   markRankedBattleJudged,
@@ -50,6 +51,7 @@ import {
   subscribeToRankedBattle,
   subscribeToRankedTicket,
   subscribeToStreamerAnswers,
+  subscribeToStreamerRoom,
   updateStreamerAnswerState,
 } from "./lib/gameRepository.js";
 import { requestJudgeVerdict } from "./lib/judgeClient.js";
@@ -1313,8 +1315,55 @@ function ViewerScreen({ roomCode, category, scenario, onHome }) {
   const [name, setName] = useState("Viewer 27");
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [roomState, setRoomState] = useState(() => ({
+    roomName: "Kai's room",
+    category,
+    prompt: scenario.prompt,
+  }));
+  const [roomStatus, setRoomStatus] = useState("Connected to the live room.");
   const { isListening, voiceStatus, toggleListening, voiceSupported } = useVoiceInput(setAnswer);
-  const currentScenario = scenario;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getStreamerRoom(roomCode)
+      .then((result) => {
+        if (cancelled) return;
+        if (result.skipped) {
+          setRoomStatus("Preview mode. Viewer answers still submit when the room is live.");
+          return;
+        }
+        if (result.error) {
+          setRoomStatus("Could not refresh room state. Showing the invite preview.");
+          return;
+        }
+        const nextState = normalizeStreamerRoom(result.room);
+        if (nextState) {
+          setRoomState(nextState);
+          setRoomStatus("Synced with the streamer room.");
+        } else {
+          setRoomStatus("Room not live yet. Waiting for the streamer.");
+        }
+      })
+      .catch((error) => {
+        console.warn("Streamer room lookup failed", error);
+        if (!cancelled) setRoomStatus("Could not refresh room state. Showing the invite preview.");
+      });
+
+    const subscription = subscribeToStreamerRoom(roomCode, (payload) => {
+      const nextState = normalizeStreamerRoom(payload.new);
+      if (!nextState) return;
+      setRoomState(nextState);
+      setSubmitted(false);
+      setAnswer("");
+      setRoomStatus("New streamer round is live.");
+    });
+
+    return () => {
+      cancelled = true;
+      subscription.unsubscribe();
+    };
+  }, [roomCode]);
 
   function submitViewerAnswer() {
     setSubmitted(true);
@@ -1332,12 +1381,12 @@ function ViewerScreen({ roomCode, category, scenario, onHome }) {
       <BrandHeader onHome={onHome} onLeave={onHome} compact />
       <section className="room-hero">
         <span className="live-pill">Live</span>
-        <h1>Kai's room</h1>
-        <p>Room {roomCode}. 241 viewers.</p>
+        <h1>{roomState.roomName}</h1>
+        <p>Room {roomCode}. 241 viewers. {roomStatus}</p>
       </section>
       <section className="scenario-card">
-        <span className="section-label">{category.name}</span>
-        <h1>{currentScenario.prompt}</h1>
+        <span className="section-label">{roomState.category.name}</span>
+        <h1>{roomState.prompt}</h1>
       </section>
       <section className="viewer-form">
         <label>
@@ -2209,5 +2258,15 @@ export function App() {
       rewardClaimed={rewardClaimed}
     />
   );
+}
+
+function normalizeStreamerRoom(room) {
+  if (!room) return null;
+  const category = categories.find((item) => item.id === room.category_id) ?? categories[1];
+  return {
+    roomName: room.room_name || "Kai's room",
+    category,
+    prompt: room.current_prompt || getScenario(category.id).prompt,
+  };
 }
 

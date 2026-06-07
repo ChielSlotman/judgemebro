@@ -231,6 +231,11 @@ async function run() {
     await page.goto(`${baseUrl}/stream/BRO9`, { waitUntil: "load" });
     await assertVisible(page, "Kai's room", "viewer deep link room");
     await assertVisible(page, "Room BRO9", "viewer deep link code");
+    await assertAnyVisible(
+      page,
+      ["Synced with the streamer room", "Preview mode", "Room not live yet", "Could not refresh room state"],
+      "viewer room sync status",
+    );
 
     await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "I am a streamer");
