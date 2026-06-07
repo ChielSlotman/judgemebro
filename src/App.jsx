@@ -496,7 +496,21 @@ function CategoryTile({ category, selected, onSelect }) {
   );
 }
 
-function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, onStreamer, onProfile, onRewards, rewardClaimed }) {
+function HomeScreen({
+  selectedCategory,
+  setSelectedCategory,
+  rating,
+  battlesLeft,
+  streak,
+  onFind,
+  onFriend,
+  onStreamer,
+  onProfile,
+  onRewards,
+  rewardClaimed,
+}) {
+  const rank = rankFromRating(rating);
+
   return (
     <main className="screen home-screen">
       <BrandHeader onHome={() => {}} onProfile={onProfile} />
@@ -514,12 +528,12 @@ function HomeScreen({ selectedCategory, setSelectedCategory, onFind, onFriend, o
         <div className="rank-stat">
           <img src="/assets/rank-gold.svg" alt="" />
           <div>
-            <strong>1128</strong>
-            <span>Gold</span>
+            <strong>{rating}</strong>
+            <span>{rank}</span>
           </div>
         </div>
-        <StatBlock icon={Bolt} value="4" label="Battles left today" />
-        <StatBlock icon={Flame} value="3" label="Day streak" accent="coral" />
+        <StatBlock icon={Bolt} value={battlesLeft} label="Battles left today" />
+        <StatBlock icon={Flame} value={streak} label="Day streak" accent="coral" />
       </section>
 
       <section className="live-strip" aria-label="Live activity">
@@ -2290,6 +2304,9 @@ export function App() {
     <HomeScreen
       selectedCategory={selectedCategory}
       setSelectedCategory={setSelectedCategory}
+      rating={rating}
+      battlesLeft={battlesLeft}
+      streak={streak}
       onFind={startMatchmaking}
       onFriend={startFriend}
       onStreamer={startStreamer}

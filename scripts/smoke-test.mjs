@@ -76,6 +76,11 @@ async function assertAnyVisible(page, options, label) {
   throw new Error(`Expected one visible text for ${label}: ${options.join(", ")}`);
 }
 
+async function assertLocatorText(page, selector, pattern, label) {
+  const text = await page.locator(selector).innerText();
+  if (!pattern.test(text)) throw new Error(`Expected ${label} to match ${pattern}, received: ${text}`);
+}
+
 async function clickButton(page, name) {
   const button = page.getByRole("button", { name });
   const count = await button.count();
@@ -145,6 +150,8 @@ async function run() {
     await assertVisible(page, "Rewards", "rewards screen");
     await clickButton(page, "Claim extra battle");
     await assertVisible(page, "Reward claimed", "claimed streak reward");
+    await page.goto(baseUrl, { waitUntil: "load" });
+    await assertLocatorText(page, ".stats-row", /5\s+BATTLES LEFT TODAY/i, "home battles-left after reward");
 
     await page.goto(baseUrl, { waitUntil: "load" });
     await clickButton(page, "Open profile");
